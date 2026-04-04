@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-agents-ui is a Nuxt 3-based visual dashboard for managing Claude Code agents, commands, skills, workflows, and plugins. It provides a GUI layer on top of the `~/.claude` directory, allowing users to create, edit, and organize their Claude Code configuration without touching markdown files directly.
+COGMINT is a Nuxt 3-based visual control plane for managing Claude Code agents, commands, skills, workflows, and plugins. It provides a GUI layer on top of the `~/.claude` directory, allowing users to create, edit, and organize their Claude Code configuration without touching markdown files directly.
 
 ## Development Commands
 
@@ -140,7 +140,7 @@ The system automatically detects relationships between agents/commands/skills by
 **Studio Chat System**:
 - Frontend uses `useStudioChat()` which streams SSE events
 - Backend uses `@anthropic-ai/claude-agent-sdk`'s `query()` function
-- System prompt is either the default "Agent Manager" prompt or the selected agent's instructions
+- System prompt is either the default "COGMINT Assistant" prompt or the selected agent's instructions
 - Session IDs enable conversation continuation across multiple messages
 - Tool progress and thinking blocks are streamed incrementally
 

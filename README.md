@@ -148,6 +148,7 @@ Language selector is available in **Settings**.
 | Variable | Description | Default |
 |---|---|---|
 | `CLAUDE_DIR` | Path to your Claude config directory | `~/.claude` |
+| `CLAUDE_CLI_PATH` | Optional explicit path to Claude CLI executable | Auto-detected |
 
 ---
 

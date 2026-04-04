@@ -1,9 +1,9 @@
 services:
-  agents-ui:
+  cogmint:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: agents-ui
+    container_name: cogmint
     restart: unless-stopped
     ports:
       - "3000:3000"
