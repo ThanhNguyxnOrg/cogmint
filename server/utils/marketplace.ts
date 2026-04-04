@@ -131,7 +131,7 @@ export async function getInstalledPluginNames(): Promise<Set<string>> {
     const names = new Set<string>()
     for (const id of Object.keys(data.plugins || {})) {
       const [name] = id.split('@')
-      names.add(name)
+      names.add(name ?? id)
     }
     return names
   } catch {
@@ -157,7 +157,9 @@ export function resolvePluginInstallPath(pluginId: string, registeredPath: strin
   if (resolved.includes('.claude')) {
     const parts = resolved.split('.claude')
     const relativePart = parts[parts.length - 1]
-    resolved = resolveClaudePath(relativePart.startsWith('/') ? relativePart.substring(1) : relativePart)
+    if (relativePart) {
+      resolved = resolveClaudePath(relativePart.startsWith('/') ? relativePart.substring(1) : relativePart)
+    }
   }
 
   // 2. If it exists, we're good
@@ -167,7 +169,7 @@ export function resolvePluginInstallPath(pluginId: string, registeredPath: strin
 
   // 3. Fallback: try common pattern ~/.claude/plugins/cache/{name}
   const [pluginName] = pluginId.split('@')
-  const fallbackPath = resolveClaudePath('plugins', 'cache', pluginName)
+  const fallbackPath = resolveClaudePath('plugins', 'cache', pluginName ?? pluginId)
   if (existsSync(fallbackPath)) {
     return fallbackPath
   }

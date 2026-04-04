@@ -29,7 +29,7 @@ watch([frontmatter, body], () => {
 function restoreDraft() {
   const draft = loadDraft()
   if (draft) {
-    frontmatter.value = draft.frontmatter as CommandFrontmatter
+    frontmatter.value = draft.frontmatter as unknown as CommandFrontmatter
     body.value = draft.body
     clearDraft()
     toast.add({ title: 'Draft restored', color: 'success' })

@@ -46,7 +46,7 @@ function autoResize() {
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
 }
 
-function selectItem(item: { type: 'command' | 'skill'; name: string }) {
+function selectItem(item: { type: 'command' | 'skill' | 'builtin'; name: string }) {
   emit('update:modelValue', `/${item.name} `)
   isMenuOpen.value = false
   inputRef.value?.focus()

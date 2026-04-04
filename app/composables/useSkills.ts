@@ -14,7 +14,7 @@ export function useSkills() {
     skills: crud.items,
     loading: crud.loading,
     error: crud.error,
-    fetchAll: (params?: any) => crud.fetchAll(params),
+    fetchAll: () => crud.fetchAll(),
     fetchOne: crud.fetchOne,
     fetchOneByPath,
     create: crud.create,

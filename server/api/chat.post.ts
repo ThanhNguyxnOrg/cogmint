@@ -136,7 +136,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Tool call
-      if (message.type === 'tool_call') {
+      if ((message as any).type === 'tool_call') {
         const m = message as any
         sendEvent('tool_call', {
           id: m.id,
@@ -146,7 +146,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Tool result
-      if (message.type === 'tool_result') {
+      if ((message as any).type === 'tool_result') {
         const m = message as any
         sendEvent('tool_result', {
           id: m.tool_use_id,

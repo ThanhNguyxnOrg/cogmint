@@ -1,5 +1,17 @@
 import type { Workflow, StepExecution } from '~/types'
 
+function mergeStep(existing: StepExecution | undefined, updates: Partial<StepExecution>): StepExecution {
+  return {
+    stepId: existing?.stepId ?? updates.stepId ?? '',
+    status: updates.status ?? existing?.status ?? 'pending',
+    input: updates.input ?? existing?.input ?? '',
+    output: updates.output ?? existing?.output ?? '',
+    error: updates.error ?? existing?.error,
+    startedAt: updates.startedAt ?? existing?.startedAt,
+    completedAt: updates.completedAt ?? existing?.completedAt,
+  }
+}
+
 export function useWorkflowExecution() {
   const steps = ref<StepExecution[]>([])
   const isRunning = ref(false)
@@ -14,9 +26,10 @@ export function useWorkflowExecution() {
   async function executeStep(stepIndex: number, input: string) {
     if (!_workflow) return
     const step = _workflow.steps[stepIndex]
+    if (!step) return
 
     currentStepIndex.value = stepIndex
-    steps.value[stepIndex] = { ...steps.value[stepIndex], status: 'running', input, startedAt: Date.now() }
+    steps.value[stepIndex] = mergeStep(steps.value[stepIndex], { status: 'running', input, startedAt: Date.now() })
     isRunning.value = true
     isPaused.value = false
 
@@ -53,10 +66,10 @@ export function useWorkflowExecution() {
             const data = JSON.parse(line.slice(6))
             if (data.type === 'text_delta') {
               resultText += data.text
-              steps.value[stepIndex] = { ...steps.value[stepIndex], output: resultText }
+              steps.value[stepIndex] = mergeStep(steps.value[stepIndex], { output: resultText })
             } else if (data.type === 'result') {
               resultText = data.text
-              steps.value[stepIndex] = { ...steps.value[stepIndex], output: resultText }
+              steps.value[stepIndex] = mergeStep(steps.value[stepIndex], { output: resultText })
             } else if (data.type === 'error') {
               throw new Error(data.message)
             }
@@ -67,11 +80,10 @@ export function useWorkflowExecution() {
         }
       }
 
-      steps.value[stepIndex] = { ...steps.value[stepIndex], status: 'completed', output: resultText, completedAt: Date.now() }
+      steps.value[stepIndex] = mergeStep(steps.value[stepIndex], { status: 'completed', output: resultText, completedAt: Date.now() })
       _lastOutput = resultText
       isRunning.value = false
 
-      // Pause for user review (unless this is the last step)
       if (stepIndex < _workflow.steps.length - 1) {
         isPaused.value = true
       } else {
@@ -80,12 +92,12 @@ export function useWorkflowExecution() {
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
-        steps.value[stepIndex] = { ...steps.value[stepIndex], status: 'failed', error: 'Cancelled', completedAt: Date.now() }
+        steps.value[stepIndex] = mergeStep(steps.value[stepIndex], { status: 'failed', error: 'Cancelled', completedAt: Date.now() })
       } else {
-        steps.value[stepIndex] = { ...steps.value[stepIndex], status: 'failed', error: err instanceof Error ? err.message : 'Unknown error', completedAt: Date.now() }
+        steps.value[stepIndex] = mergeStep(steps.value[stepIndex], { status: 'failed', error: err instanceof Error ? err.message : 'Unknown error', completedAt: Date.now() })
       }
       for (let j = stepIndex + 1; j < _workflow.steps.length; j++) {
-        steps.value[j] = { ...steps.value[j], status: 'skipped' }
+        steps.value[j] = mergeStep(steps.value[j], { status: 'skipped' })
       }
       isRunning.value = false
       isPaused.value = false
@@ -112,7 +124,6 @@ export function useWorkflowExecution() {
     await executeStep(0, initialPrompt)
   }
 
-  // Continue to next step with the current output (unmodified)
   async function continueWorkflow() {
     if (!_workflow || !isPaused.value) return
     const nextIndex = currentStepIndex.value + 1
@@ -120,7 +131,6 @@ export function useWorkflowExecution() {
     await executeStep(nextIndex, _lastOutput)
   }
 
-  // Continue to next step with edited/custom text
   async function continueWith(text: string) {
     if (!_workflow || !isPaused.value) return
     const nextIndex = currentStepIndex.value + 1
@@ -129,13 +139,11 @@ export function useWorkflowExecution() {
     await executeStep(nextIndex, text)
   }
 
-  // Re-run the current step with a user reply (for when agent asked questions)
   async function respondToStep(reply: string) {
     if (!_workflow || !isPaused.value) return
     const idx = currentStepIndex.value
-    // Combine the agent's output + user reply as the new input for the SAME step
     const combinedInput = `Previous agent output:\n${_lastOutput}\n\nUser response:\n${reply}`
-    steps.value[idx] = { ...steps.value[idx], status: 'pending', output: '', error: undefined, completedAt: undefined }
+    steps.value[idx] = mergeStep(steps.value[idx], { status: 'pending', output: '', error: undefined, completedAt: undefined })
     await executeStep(idx, combinedInput)
   }
 
@@ -146,7 +154,7 @@ export function useWorkflowExecution() {
     if (_workflow) {
       for (let j = currentStepIndex.value + 1; j < _workflow.steps.length; j++) {
         if (steps.value[j]?.status === 'pending') {
-          steps.value[j] = { ...steps.value[j], status: 'skipped' }
+          steps.value[j] = mergeStep(steps.value[j], { status: 'skipped' })
         }
       }
     }

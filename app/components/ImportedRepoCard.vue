@@ -20,7 +20,7 @@ const hasUpdate = computed(() => props.entry.currentSha !== props.entry.remoteSh
 const editing = ref(false)
 const loadingItems = ref(false)
 const saving = ref(false)
-const availableItems = ref<{ slug: string; name: string; description: string; category: string | null; selected: boolean }[]>([])
+const availableItems = ref<{ slug: string; name: string; description: string; category?: string | null; selected: boolean }[]>([])
 const selectedItems = ref<Set<string>>(new Set())
 
 const groupedItems = computed(() => {
@@ -31,7 +31,7 @@ const groupedItems = computed(() => {
     groups[cat].push(item)
   }
   return Object.keys(groups).sort().reduce((acc, key) => {
-    acc[key] = groups[key]
+    acc[key] = groups[key] ?? []
     return acc
   }, {} as Record<string, typeof availableItems.value>)
 })

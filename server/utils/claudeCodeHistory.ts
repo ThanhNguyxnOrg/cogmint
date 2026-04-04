@@ -164,7 +164,7 @@ async function applyCustomSessionNames(sessions: ClaudeCodeSession[]): Promise<v
   const names = await loadSessionNames()
   for (const session of sessions) {
     if (names[session.id]) {
-      session.summary = names[session.id].summary
+      session.summary = names[session.id]!.summary
     }
   }
 }
@@ -177,7 +177,7 @@ async function applyCustomProjectNames(projects: ClaudeCodeProject[]): Promise<v
   const names = await loadProjectNames()
   for (const project of projects) {
     if (names[project.name]) {
-      project.displayName = names[project.name].displayName
+      project.displayName = names[project.name]!.displayName
     }
   }
 }
@@ -202,7 +202,7 @@ async function extractProjectDirectory(projectName: string): Promise<string> {
   const cwdCounts = new Map<string, number>()
   let latestTimestamp = 0
   let latestCwd: string | null = null
-  let extractedPath: string
+  let extractedPath = projectName.replace(/-/g, '/')
 
   try {
     await fs.access(projectDir)
@@ -244,7 +244,7 @@ async function extractProjectDirectory(projectName: string): Promise<string> {
       if (cwdCounts.size === 0) {
         extractedPath = projectName.replace(/-/g, '/')
       } else if (cwdCounts.size === 1) {
-        extractedPath = Array.from(cwdCounts.keys())[0]
+        extractedPath = Array.from(cwdCounts.keys())[0] ?? projectName.replace(/-/g, '/')
       } else {
         // Multiple cwd values - prefer most recent if it has reasonable usage
         const mostRecentCount = latestCwd ? (cwdCounts.get(latestCwd) || 0) : 0
@@ -604,6 +604,7 @@ export async function getClaudeCodeSessionMessages(
     
     for (let i = sortedMessages.length - 1; i >= 0; i--) {
       const msg = sortedMessages[i]
+      if (!msg) continue
       
       // Extract model if present anywhere in session
       if ((msg as any).model && !model) {

@@ -66,7 +66,7 @@ export function useClaudeCodeHistory() {
         total: number
       }>('/api/projects') // Use the consolidated endpoint
 
-      projects.value = response
+      projects.value = response.projects
       return response
     } catch (error) {
       console.error('Failed to fetch Claude Code projects:', error)

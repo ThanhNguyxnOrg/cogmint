@@ -80,19 +80,19 @@ export function parseTokenUsage(output: string): Partial<TokenUsage> | null {
   // Match input tokens
   const inputMatch = output.match(/Input tokens?:\s*([\d,]+)/i)
   if (inputMatch) {
-    tokens.input = parseInt(inputMatch[1].replace(/,/g, ''), 10)
+    tokens.input = parseInt(inputMatch[1]!.replace(/,/g, ''), 10)
   }
 
   // Match output tokens
   const outputMatch = output.match(/Output tokens?:\s*([\d,]+)/i)
   if (outputMatch) {
-    tokens.output = parseInt(outputMatch[1].replace(/,/g, ''), 10)
+    tokens.output = parseInt(outputMatch[1]!.replace(/,/g, ''), 10)
   }
 
   // Match cached tokens
   const cachedMatch = output.match(/Cache (?:read )?tokens?:\s*([\d,]+)/i)
   if (cachedMatch) {
-    tokens.cached = parseInt(cachedMatch[1].replace(/,/g, ''), 10)
+    tokens.cached = parseInt(cachedMatch[1]!.replace(/,/g, ''), 10)
   }
 
   // Return null if no tokens were found
@@ -114,7 +114,7 @@ export function parseToolCalls(output: string): ToolCall[] {
     const startMatch = line.match(/Tool:\s+(\w+)\s*(?:\((.*?)\))?/i)
     if (startMatch) {
       tools.push({
-        toolName: startMatch[1],
+        toolName: startMatch[1] ?? '',
         timestamp: new Date().toISOString(),
         args: startMatch[2],
         status: 'running',
@@ -129,7 +129,7 @@ export function parseToolCalls(output: string): ToolCall[] {
       const tool = [...tools].reverse().find((t) => t.toolName === completeMatch[1] && t.status === 'running')
       if (tool) {
         tool.status = 'success'
-        tool.elapsed = parseFloat(completeMatch[2]) * 1000 // Convert to ms
+        tool.elapsed = parseFloat(completeMatch[2] ?? '0') * 1000 // Convert to ms
       }
       continue
     }

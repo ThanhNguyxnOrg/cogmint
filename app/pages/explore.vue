@@ -147,7 +147,7 @@ const availableGroupedByMarketplace = computed(() => {
   const groups: Record<string, typeof availablePlugins.value> = {};
   for (const plugin of filteredAvailablePlugins.value) {
     if (!groups[plugin.marketplace]) groups[plugin.marketplace] = [];
-    groups[plugin.marketplace].push(plugin);
+    groups[plugin.marketplace]!.push(plugin);
   }
   return groups;
 });

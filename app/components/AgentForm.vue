@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Agent, AgentFrontmatter } from "~/types";
+import type { Agent, AgentFrontmatter, AgentTool, AgentMemory } from "~/types";
 import { MODEL, MODEL_IDS, MODEL_META } from "~/utils/models";
 
 const props = defineProps<{
@@ -28,9 +28,14 @@ const frontmatter = ref<AgentFrontmatter>({
   model: source?.frontmatter.model,
   color: source?.frontmatter.color,
   memory: source?.frontmatter.memory,
-  skills: source?.frontmatter.skills || [],
-  tools: source?.frontmatter.tools || [],
+  skills: source?.frontmatter.skills ?? [],
+  tools: source?.frontmatter.tools ?? [],
 });
+
+const skillsModel = computed({
+  get: () => frontmatter.value.skills ?? [],
+  set: (val: string[]) => { frontmatter.value.skills = val },
+})
 
 onMounted(() => {
   fetchAllSkills();
@@ -256,7 +261,7 @@ async function save() {
       </span>
       <div class="mt-2">
         <UMultiSelectDropdown
-          v-model="frontmatter.skills"
+          v-model="skillsModel"
           :options="allSkills.map(s => ({
             value: s.slug,
             label: s.frontmatter.name || s.slug,

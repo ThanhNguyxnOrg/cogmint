@@ -7,7 +7,7 @@ const { agents, fetchAll: fetchAgents } = useAgents();
 const { commands, fetchAll: fetchCommands } = useCommands();
 const { plugins, fetchAll: fetchPlugins } = usePlugins();
 const { skills, fetchAll: fetchSkills } = useSkills();
-const { imports: githubImports, fetchImports } = useGithubImports();
+const { skillImports, agentImports, fetchImports } = useGithubImports();
 const { settings, load: loadSettings } = useSettings();
 
 const dirInput = ref("");

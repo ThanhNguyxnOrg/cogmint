@@ -39,14 +39,45 @@ function toggleSkillEditor(slug: string) {
   editingSkill.value = editingSkill.value === slug ? null : slug
 }
 
+function getSkillFm(slug: string): SkillFrontmatter {
+  if (!skillFrontmatters.value[slug]) {
+    const skill = plugin.value?.skillDetails.find(s => s.slug === slug)
+    skillFrontmatters.value[slug] = skill ? { ...skill.frontmatter } : { name: '', description: '' }
+  }
+  return skillFrontmatters.value[slug]!
+}
+
+function getSkillBody(slug: string): string {
+  if (skillBodies.value[slug] === undefined) {
+    const skill = plugin.value?.skillDetails.find(s => s.slug === slug)
+    skillBodies.value[slug] = skill?.body ?? ''
+  }
+  return skillBodies.value[slug]!
+}
+
+function setSkillBody(slug: string, value: string) {
+  getSkillBody(slug)
+  skillBodies.value[slug] = value
+}
+
+function setSkillFmField(slug: string, field: keyof SkillFrontmatter, value: string) {
+  const fm = getSkillFm(slug)
+  if (field === 'name' || field === 'description' || field === 'context' || field === 'agent') {
+    fm[field] = value
+  }
+}
+
 async function saveSkill(slug: string) {
   savingSkill.value = true
   try {
-    await updateSkill(id, slug, skillFrontmatters.value[slug], skillBodies.value[slug])
+    const fm = skillFrontmatters.value[slug]
+    const body = skillBodies.value[slug]
+    if (!fm || body === undefined) return
+    await updateSkill(id, slug, fm, body)
     const skill = plugin.value?.skillDetails.find(s => s.slug === slug)
     if (skill) {
-      skill.frontmatter = { ...skillFrontmatters.value[slug] }
-      skill.body = skillBodies.value[slug]
+      skill.frontmatter = { ...fm }
+      skill.body = body
     }
     toast.add({ title: 'Skill saved', color: 'success' })
   } catch (e: any) {
@@ -251,19 +282,37 @@ if (import.meta.client) {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div class="field-group">
                     <label class="field-label">Name</label>
-                    <input v-model="skillFrontmatters[skill.slug].name" class="field-input" />
+                    <input
+                      :value="getSkillFm(skill.slug).name"
+                      class="field-input"
+                      @input="setSkillFmField(skill.slug, 'name', ($event.target as HTMLInputElement).value)"
+                    />
                   </div>
                   <div class="field-group">
                     <label class="field-label">Context</label>
-                    <input v-model="skillFrontmatters[skill.slug].context" class="field-input" placeholder="e.g. fork" />
+                    <input
+                      :value="getSkillFm(skill.slug).context || ''"
+                      class="field-input"
+                      placeholder="e.g. fork"
+                      @input="setSkillFmField(skill.slug, 'context', ($event.target as HTMLInputElement).value)"
+                    />
                   </div>
                   <div class="field-group sm:col-span-2">
                     <label class="field-label">Description</label>
-                    <input v-model="skillFrontmatters[skill.slug].description" class="field-input" />
+                    <input
+                      :value="getSkillFm(skill.slug).description"
+                      class="field-input"
+                      @input="setSkillFmField(skill.slug, 'description', ($event.target as HTMLInputElement).value)"
+                    />
                   </div>
                   <div class="field-group">
                     <label class="field-label">Agent</label>
-                    <input v-model="skillFrontmatters[skill.slug].agent" class="field-input" placeholder="Optional agent name" />
+                    <input
+                      :value="getSkillFm(skill.slug).agent || ''"
+                      class="field-input"
+                      placeholder="Optional agent name"
+                      @input="setSkillFmField(skill.slug, 'agent', ($event.target as HTMLInputElement).value)"
+                    />
                   </div>
                 </div>
               </div>
@@ -274,19 +323,20 @@ if (import.meta.client) {
                   <h4 class="text-section-label">Instructions</h4>
                   <div class="flex items-center gap-3">
                     <span class="font-mono text-[10px] text-meta">
-                      {{ skillBodies[skill.slug].split('\n').length }} lines
+                      {{ getSkillBody(skill.slug).split('\n').length }} lines
                     </span>
                     <span class="font-mono text-[10px] text-meta">
-                      {{ skillBodies[skill.slug].length.toLocaleString() }} chars
+                      {{ getSkillBody(skill.slug).length.toLocaleString() }} chars
                     </span>
                   </div>
                 </div>
                 <textarea
-                  v-model="skillBodies[skill.slug]"
+                  :value="getSkillBody(skill.slug)"
                   class="editor-textarea"
                   style="min-height: 300px;"
                   spellcheck="false"
                   placeholder="Skill prompt..."
+                  @input="setSkillBody(skill.slug, ($event.target as HTMLTextAreaElement).value)"
                 />
               </div>
 

@@ -43,6 +43,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const entry = entries[0]
+  if (!entry) {
+    throw createError({ statusCode: 404, message: `Plugin not found: ${id}` })
+  }
   const [name, marketplace] = id.split('@')
   const installPath = resolvePluginInstallPath(id, entry.installPath)
   const pluginJsonPath = join(installPath, '.claude-plugin', 'plugin.json')
@@ -63,7 +66,7 @@ export default defineEventHandler(async (event) => {
       const { frontmatter, body } = parseFrontmatter<SkillFrontmatter>(raw)
       skillDetails.push({
         slug: dir.name,
-        frontmatter: { name: dir.name, ...frontmatter },
+        frontmatter: { ...frontmatter, name: frontmatter.name ?? dir.name },
         body,
         filePath: skillPath,
       })
@@ -72,7 +75,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     id,
-    name: meta?.name ?? name,
+    name: meta?.name ?? name ?? id,
     marketplace: marketplace ?? 'unknown',
     description: meta?.description ?? '',
     version: entry.version,

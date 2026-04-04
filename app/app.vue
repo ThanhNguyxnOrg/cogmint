@@ -29,6 +29,9 @@ const dirSuggestions = ref<{ name: string; path: string; hasChildren: boolean }[
 const selectedSuggestionIdx = ref(-1)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
+// Expose Promise for use in templates
+const _Promise = Promise
+
 function openWorkingDirPopover() {
   workingDirInput.value = workingDir.value
   dirSuggestions.value = []
@@ -343,7 +346,7 @@ const sidebarWidth = computed(() => {
         </div>
 
         <div :class="sidebarCollapsed ? 'px-1.5 pb-2.5' : 'px-2.5 pb-2.5'" style="border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
-          <UPopover v-model:open="showWorkingDirPopover" :ui="{ width: 'w-[280px]' }">
+          <UPopover v-model:open="showWorkingDirPopover" :ui="{ content: 'w-[280px]' }">
             <button
               class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring cursor-pointer press-scale"
               :class="sidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2 text-left'"
@@ -456,7 +459,7 @@ const sidebarWidth = computed(() => {
 
         <SetupWizard
           v-if="initialized && !claudeDirExists"
-          @complete="async () => { await loadConfig(); await Promise.all([fetchAgents(), fetchCommands(), fetchPlugins(), fetchSkills()]) }"
+          @complete="async () => { await loadConfig(); await _Promise.all([fetchAgents(), fetchCommands(), fetchPlugins(), fetchSkills()]) }"
         />
 
          <div v-show="initialized && claudeDirExists" class="h-full min-w-0">

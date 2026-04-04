@@ -153,7 +153,6 @@ export function useChatSessions() {
       if (currentSessionId.value === sessionId) {
         currentSessionId.value = null
         currentSession.value = null
-        messages.value = []
       }
 
       return true

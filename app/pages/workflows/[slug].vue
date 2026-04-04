@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VueFlow } from '@vue-flow/core'
+import { VueFlow, MarkerType } from '@vue-flow/core'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
@@ -64,14 +64,18 @@ const nodes = computed(() =>
 
 // Compute edges (sequential: step[i] -> step[i+1])
 const edges = computed(() =>
-  workflowSteps.value.slice(0, -1).map((step, i) => ({
-    id: `e-${step.id}-${workflowSteps.value[i + 1].id}`,
-    source: step.id,
-    target: workflowSteps.value[i + 1].id,
-    animated: true,
-    style: { strokeDasharray: '5 5', stroke: 'var(--accent)' },
-    markerEnd: { type: 'arrowclosed', color: 'var(--accent)' },
-  }))
+  workflowSteps.value.slice(0, -1).map((step, i) => {
+    const nextStep = workflowSteps.value[i + 1]
+    if (!nextStep) return null
+    return {
+      id: `e-${step.id}-${nextStep.id}`,
+      source: step.id,
+      target: nextStep.id,
+      animated: true,
+      style: { strokeDasharray: '5 5', stroke: 'var(--accent)' },
+      markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--accent)' },
+    }
+  }).filter((e): e is NonNullable<typeof e> => e !== null)
 )
 
 // Drag-and-drop from palette
@@ -109,7 +113,11 @@ function moveStep(stepId: string, direction: -1 | 1) {
   const newIdx = idx + direction
   if (newIdx < 0 || newIdx >= workflowSteps.value.length) return
   const copy = [...workflowSteps.value]
-  ;[copy[idx], copy[newIdx]] = [copy[newIdx], copy[idx]]
+  const fromItem = copy[idx]
+  const toItem = copy[newIdx]
+  if (!fromItem || !toItem) return
+  copy[idx] = toItem
+  copy[newIdx] = fromItem
   workflowSteps.value = copy
 }
 

@@ -25,8 +25,9 @@ const replyText = ref('')
 
 // Auto-expand the current/paused step
 watch(() => props.currentStepIndex, (idx) => {
-  if (idx >= 0 && idx < props.workflowSteps.length) {
-    expandedStep.value = props.workflowSteps[idx].id
+  if (idx !== undefined && idx >= 0 && idx < props.workflowSteps.length) {
+    const step = props.workflowSteps[idx]
+    if (step) expandedStep.value = step.id
   }
 })
 
@@ -87,7 +88,7 @@ const nextStepLabel = computed(() => {
   if (!props.isPaused) return ''
   const nextIdx = props.currentStepIndex + 1
   if (nextIdx >= props.workflowSteps.length) return ''
-  return props.workflowSteps[nextIdx].label
+  return props.workflowSteps[nextIdx]?.label ?? ''
 })
 </script>
 

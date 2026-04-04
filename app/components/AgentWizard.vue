@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Agent, AgentFrontmatter, AgentMemory } from '~/types'
+import type { Agent, AgentFrontmatter, AgentMemory, AgentTool } from '~/types'
 import { MODEL_OPTIONS, DEFAULT_MODEL } from '~/utils/models'
 
 const emit = defineEmits<{
@@ -23,6 +23,12 @@ const frontmatter = ref<AgentFrontmatter>({
   tools: [],
 })
 const body = ref('')
+
+// Computed wrapper to ensure skills is always string[] for v-model
+const skillsModel = computed({
+  get: () => frontmatter.value.skills ?? [],
+  set: (val: string[]) => { frontmatter.value.skills = val },
+})
 
 onMounted(() => {
   fetchAllSkills()
@@ -269,7 +275,7 @@ function toggleTool(tool: AgentTool) {
       <div class="field-group">
         <label class="field-label">Skills</label>
         <UMultiSelectDropdown
-          v-model="frontmatter.skills"
+          v-model="skillsModel"
           :options="allSkills.map(s => ({
             value: s.slug,
             label: s.frontmatter.name || s.slug,

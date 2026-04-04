@@ -18,7 +18,7 @@ const filteredSkills = computed(() => {
 })
 
 onMounted(() => {
-  fetchSkills({ workingDir: workingDir.value })
+  fetchSkills()
 })
 </script>
 
