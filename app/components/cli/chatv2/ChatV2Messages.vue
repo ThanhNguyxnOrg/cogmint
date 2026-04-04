@@ -82,8 +82,9 @@ function handleOpenFile(filePath: string) {
       class="message-group min-w-0"
     >
       <!-- User Message Group -->
-      <div v-if="group.role === 'user'" class="flex justify-end min-w-0">
-        <div class="flex items-start gap-2 md:gap-3 max-w-[95%] md:max-w-[85%] min-w-0">
+        <div v-if="group.role === 'user'" class="flex justify-end min-w-0">
+          <div class="flex items-start gap-2 md:gap-3 max-w-full min-w-0">
+
           <div class="flex flex-col items-end gap-1.5 min-w-0">
             <!-- All user messages in this group -->
             <div
@@ -131,7 +132,8 @@ function handleOpenFile(filePath: string) {
       </div>
 
       <!-- Assistant Message Group -->
-      <div v-else class="flex items-start gap-2 md:gap-3 min-w-0">
+       <div v-else class="flex items-start gap-2 md:gap-3 min-w-0 w-full">
+
         <!-- Claude Avatar -->
         <div
           class="size-7 md:size-8 rounded-full shrink-0 flex items-center justify-center"

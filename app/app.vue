@@ -15,6 +15,10 @@ const { fetchServers, servers: mcpServers } = useMCP()
 const initialized = ref(false)
 const showSearch = ref(false)
 const sidebarCollapsed = useState('sidebar-collapsed', () => false)
+const mobileSidebarOpen = ref(false)
+const windowWidth = ref(1366)
+const isMobileLayout = computed(() => windowWidth.value < 1024)
+
 const { isPanelOpen: chatOpen } = useChat()
 const { workingDir, displayPath, setWorkingDir, clearWorkingDir } = useWorkingDir()
 const colorMode = useColorMode()
@@ -93,6 +97,12 @@ function toggleTheme() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
+function updateLayoutWidth() {
+  if (import.meta.client) {
+    windowWidth.value = window.innerWidth
+  }
+}
+
 // Cmd+J to toggle chat
 if (import.meta.client) {
   const chatHandler = (e: KeyboardEvent) => {
@@ -106,10 +116,17 @@ if (import.meta.client) {
 }
 
 onMounted(async () => {
+  updateLayoutWidth()
+  window.addEventListener('resize', updateLayoutWidth)
+
   await loadConfig()
   await Promise.all([loadSettings(), fetchAgents(), fetchCommands(), fetchPlugins(), fetchSkills(), fetchWorkflows(), fetchServers()])
   syncFromSettings(settings.value)
   initialized.value = true
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateLayoutWidth)
 })
 
 const navLinks = computed(() => [
@@ -143,15 +160,21 @@ function badgeFor(to: string) {
   if (to === '/mcp') return mcpServers.value.length || null
   return null
 }
+
+const sidebarWidth = computed(() => {
+  if (isMobileLayout.value) return '0px'
+  return sidebarCollapsed.value ? '56px' : '200px'
+})
 </script>
 
 <template>
   <UApp>
-    <div class="flex h-screen overflow-hidden" style="background: var(--surface-base);">
+    <div class="flex h-screen overflow-hidden relative" style="background: var(--surface-base);">
       <aside
-        class="sidebar shrink-0 flex flex-col relative h-full overflow-hidden transition-all duration-300"
+        class="sidebar shrink-0 flex flex-col h-full overflow-hidden transition-all duration-300"
+        :class="{ 'relative': !isMobileLayout, 'fixed inset-y-0 left-0 z-50': isMobileLayout, 'translate-x-0': !isMobileLayout || mobileSidebarOpen, '-translate-x-full': isMobileLayout && !mobileSidebarOpen }"
         :style="{
-          width: sidebarCollapsed ? '56px' : '200px',
+          width: isMobileLayout ? '280px' : sidebarWidth,
           background: 'var(--sidebar-bg)',
           borderRight: '1px solid var(--border-subtle)',
         }"
@@ -179,12 +202,14 @@ function badgeFor(to: string) {
             </div>
           </template>
           <button
-            class="hidden md:flex size-7 items-center justify-center rounded-lg transition-all duration-150 focus-ring press-scale shrink-0"
+            class="size-7 items-center justify-center rounded-lg transition-all duration-150 focus-ring press-scale shrink-0"
+            :class="isMobileLayout ? 'hidden' : 'hidden md:flex'"
             style="color: var(--text-tertiary);"
             :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
             @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'"
             @mouseleave="($event.currentTarget as HTMLElement).style.background = 'transparent'"
-            @click="sidebarCollapsed = !sidebarCollapsed"
+             @click="isMobileLayout ? (mobileSidebarOpen = false) : (sidebarCollapsed = !sidebarCollapsed)"
+
           >
             <UIcon :name="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'" class="size-4" />
           </button>
@@ -410,13 +435,32 @@ function badgeFor(to: string) {
         </div>
       </aside>
 
-      <main class="flex-1 min-w-0 h-full overflow-y-auto" style="background: var(--surface-base);">
+      <div
+        v-if="isMobileLayout && mobileSidebarOpen"
+        class="fixed inset-0 z-40"
+        style="background: rgba(2, 6, 23, 0.55); backdrop-filter: blur(2px);"
+        @click="mobileSidebarOpen = false"
+      />
+
+      <main class="flex-1 min-w-0 h-full overflow-y-auto" :style="{ background: 'var(--surface-base)' }">
+        <div v-if="isMobileLayout" class="sticky top-0 z-30 px-3 py-2 border-b" style="background: color-mix(in srgb, var(--surface-base) 90%, #2f6fff 10%); border-color: var(--border-subtle);">
+          <button
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium"
+            style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--border-subtle);"
+            @click="mobileSidebarOpen = true"
+          >
+            <UIcon name="i-lucide-panel-left" class="size-4" />
+            Menu
+          </button>
+        </div>
+
         <SetupWizard
           v-if="initialized && !claudeDirExists"
           @complete="async () => { await loadConfig(); await Promise.all([fetchAgents(), fetchCommands(), fetchPlugins(), fetchSkills()]) }"
         />
 
-        <div v-show="initialized && claudeDirExists" class="h-full">
+         <div v-show="initialized && claudeDirExists" class="h-full min-w-0">
+
           <NuxtPage />
         </div>
         <div v-if="!initialized" class="flex items-center justify-center h-full">
