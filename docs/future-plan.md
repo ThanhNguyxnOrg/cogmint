@@ -103,6 +103,37 @@ Users want routing flexibility beyond first-party Anthropic endpoints.
 
 ---
 
+## 5) Distribution strategy (professional, minimal middlemen)
+
+### Goal
+Ship COGMINT in a production-grade way while avoiding heavy dependency on package middlemen like npm for primary installation.
+
+### Preferred distribution model
+- Primary channel: **GitHub Releases** with signed artifacts for all 3 OS
+  - Windows: `.zip` + installer script
+  - macOS: `.tar.gz` (intel + apple silicon) + installer script
+  - Linux: `.tar.gz` + installer script
+- Integrity checks: SHA256 checksums + optional signature verification before install
+- Npm path remains optional fallback only, not the main path
+
+### Runtime bootstrap flow for `/cogmint`
+- `/cogmint` command checks local COGMINT binary availability/version
+- If missing/outdated: download latest matching OS artifact from GitHub Release, verify checksum, install to user-local bin path
+- Start local server on free port, then return local URL (`http://127.0.0.1:<port>`)
+
+### Operational polish requirements
+- Auto-update command (`cogmint update`) with rollback on failed upgrade
+- Health-check endpoint before opening browser
+- Structured logs for install/start failures by OS
+- Fallback path: Docker-based start for users who prefer container runtime
+
+### CI/CD requirements
+- Matrix builds for `windows-latest`, `macos-latest`, `ubuntu-latest`
+- Publish release assets + checksums on tag
+- Smoke-test each artifact in clean runner before publish
+
+---
+
 ## Success criteria (future)
 - CLI-first users can finish common tasks without full page navigation.
 - Raycast users can execute top 5 actions in <5 seconds.

@@ -127,7 +127,7 @@ Current baseline:
 
 - English default (`en`)
 - Locale field persisted in settings (`settings.locale`)
-- Vietnamese scaffold included for progressive rollout
+- Vietnamese translation coverage across core and detail pages
 
 Language selector is available in **Settings**.
 
@@ -154,7 +154,7 @@ Language selector is available in **Settings**.
 
 ## Roadmap
 
-- [ ] Full i18n coverage across all pages
+- [x] Full i18n coverage across all pages
 - [ ] GIF demo walkthroughs for README
 - [ ] Theme presets and workspace personalization packs
 - [ ] Extended test harness for workflow simulation
