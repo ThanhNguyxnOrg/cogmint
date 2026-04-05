@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Skill, SkillFrontmatter } from '~/types'
 import InstructionEditor from '~/components/studio/InstructionEditor.vue'
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -32,7 +33,7 @@ function restoreDraft() {
     frontmatter.value = draft.frontmatter as SkillFrontmatter
     body.value = draft.body
     clearDraft()
-    toast.add({ title: 'Draft restored', color: 'success' })
+    toast.add({ title: t('common.draftRestored'), color: 'success' })
   }
 }
 
@@ -58,14 +59,14 @@ onMounted(async () => {
     clearStudioChat()
   } catch (err: any) {
     console.error('Skill load error:', err)
-    toast.add({ title: 'Skill not found', color: 'error' })
+    toast.add({ title: t('skillsDetail.notFound'), color: 'error' })
     router.push('/skills')
   }
 })
 
 async function save() {
   if (!frontmatter.value.name.trim()) {
-    toast.add({ title: 'Name is required', color: 'error' })
+    toast.add({ title: t('common.nameRequired'), color: 'error' })
     return
   }
 
@@ -82,10 +83,10 @@ async function save() {
     const updated = await update(slug, { frontmatter: fm, body: body.value })
     skill.value = updated
     clearDraft()
-    toast.add({ title: 'Saved', color: 'success' })
+    toast.add({ title: t('common.saved'), color: 'success' })
     if (updated.slug !== slug) router.replace(`/skills/${updated.slug}`)
   } catch (e: any) {
-    toast.add({ title: 'Failed to save', description: e.data?.message || e.message, color: 'error' })
+    toast.add({ title: t('common.failedToSave'), description: e.data?.message || e.message, color: 'error' })
   } finally {
     saving.value = false
   }
@@ -96,10 +97,10 @@ const showDeleteConfirm = ref(false)
 async function deleteSkill() {
   try {
     await remove(slug)
-    toast.add({ title: 'Deleted', color: 'success' })
+    toast.add({ title: t('common.deleted'), color: 'success' })
     router.push('/skills')
   } catch {
-    toast.add({ title: 'Failed to delete', color: 'error' })
+    toast.add({ title: t('common.failedToDelete'), color: 'error' })
   }
 }
 
@@ -111,10 +112,10 @@ async function editCopy() {
       frontmatter: { ...skill.value.frontmatter, name: skill.value.frontmatter.name + ' (copy)' },
       body: skill.value.body,
     })
-    toast.add({ title: 'Copy created', color: 'success' })
+    toast.add({ title: t('skillsDetail.copyCreated'), color: 'success' })
     router.push(`/skills/${copy.slug}`)
   } catch (e: any) {
-    toast.add({ title: 'Failed to create copy', description: e.data?.message || e.message, color: 'error' })
+    toast.add({ title: t('skillsDetail.failedToCreateCopy'), description: e.data?.message || e.message, color: 'error' })
   }
 }
 
@@ -151,7 +152,7 @@ useUnsavedChanges(isDirty)
   <div class="h-full flex flex-col">
     <PageHeader :title="skill?.frontmatter.name || slug">
       <template #leading>
-        <NuxtLink to="/skills" class="focus-ring rounded p-1.5 -m-1.5" aria-label="Back to skills">
+        <NuxtLink to="/skills" class="focus-ring rounded p-1.5 -m-1.5" :aria-label="`Back to ${t('skills.title')}`">
           <UIcon name="i-lucide-arrow-left" class="size-4 text-label" />
         </NuxtLink>
       </template>
@@ -164,7 +165,7 @@ useUnsavedChanges(isDirty)
           size="sm"
           variant="ghost"
           color="neutral"
-          title="Use Skill in Chat"
+          :title="t('skillsDetail.useInChat')"
           :disabled="!skill"
           @click="prefillSkill(skill!.frontmatter.name)"
         />
@@ -174,12 +175,12 @@ useUnsavedChanges(isDirty)
           size="sm"
           variant="ghost"
           color="neutral"
-          title="Open in Finder"
+          :title="t('common.openInFinder')"
           @click="reveal(skill.filePath)"
         />
         <template v-if="!isImported">
           <UButton
-            label="Delete"
+            :label="t('common.delete')"
             icon="i-lucide-trash-2"
             size="sm"
             variant="ghost"
@@ -187,7 +188,7 @@ useUnsavedChanges(isDirty)
             @click="showDeleteConfirm = true"
           />
           <UButton 
-            label="Save" 
+            :label="saving ? t('common.saving') : t('common.save')" 
             icon="i-lucide-save" 
             size="sm" 
             :loading="saving" 
@@ -197,7 +198,7 @@ useUnsavedChanges(isDirty)
             @click="save" 
           />
         </template>
-        <UButton v-else label="Edit a copy" icon="i-lucide-copy" size="sm" color="neutral" variant="soft" @click="editCopy" />
+        <UButton v-else :label="t('common.editACopy')" icon="i-lucide-copy" size="sm" color="neutral" variant="soft" @click="editCopy" />
       </template>
     </PageHeader>
 
@@ -213,10 +214,10 @@ useUnsavedChanges(isDirty)
           >
             <UIcon name="i-lucide-archive-restore" class="size-4 shrink-0" style="color: var(--info, #3b82f6);" />
             <span class="text-[12px] flex-1" style="color: var(--text-secondary);">
-              You have an unsaved draft from {{ draftAge }}.
+              {{ t('skillsDetail.unsavedDraft') }} {{ draftAge }}.
             </span>
-            <button class="text-[12px] font-medium px-2 py-1 rounded hover-bg" style="color: var(--info, #3b82f6);" @click="restoreDraft">Restore</button>
-            <button class="text-[12px] px-2 py-1 rounded hover-bg text-meta" @click="clearDraft">Dismiss</button>
+            <button class="text-[12px] font-medium px-2 py-1 rounded hover-bg" style="color: var(--info, #3b82f6);" @click="restoreDraft">{{ t('common.restore') }}</button>
+            <button class="text-[12px] px-2 py-1 rounded hover-bg text-meta" @click="clearDraft">{{ t('common.dismiss') }}</button>
           </div>
         </ClientOnly>
 
@@ -230,9 +231,9 @@ useUnsavedChanges(isDirty)
             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
           </svg>
           <span class="text-[12px] flex-1 text-label">
-            This skill is imported from GitHub and is read-only. Updates from the source may overwrite local changes.
+            {{ t('skillsDetail.readOnlyBanner') }}
           </span>
-          <UButton label="Edit a copy" size="xs" variant="soft" @click="editCopy" />
+          <UButton :label="t('common.editACopy')" size="xs" variant="soft" @click="editCopy" />
         </div>
 
         <!-- Configuration -->
@@ -260,7 +261,7 @@ useUnsavedChanges(isDirty)
               <div class="flex-1 min-w-0 pt-0.5">
                 <div class="flex items-center gap-2.5 flex-wrap">
                   <span class="text-[15px] font-semibold tracking-tight truncate">
-                    {{ frontmatter.name || 'Unnamed Skill' }}
+                    {{ frontmatter.name || t('skillsDetail.unnamedSkill') }}
                   </span>
                   <span
                     v-if="frontmatter.context"
@@ -285,32 +286,32 @@ useUnsavedChanges(isDirty)
 
           <!-- Form fields -->
           <div class="px-5 py-4 space-y-4 rounded-b-xl" style="background: var(--surface-base); border-top: 1px solid var(--border-subtle);">
-            <h3 class="text-section-label">Configuration</h3>
+            <h3 class="text-section-label">{{ t('common.configuration') }}</h3>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="field-group">
-                <label class="field-label">Name</label>
+                <label class="field-label">{{ t('common.name') }}</label>
                 <input v-model="frontmatter.name" class="field-input" :disabled="isImported" />
-                <span class="field-hint">Identifier for this skill. Also used as the slash command name.</span>
+                <span class="field-hint">{{ t('skillsDetail.identifierHint') }}</span>
               </div>
               <div class="field-group">
-                <label class="field-label">Availability</label>
+                <label class="field-label">{{ t('skillsDetail.availability') }}</label>
                 <input v-model="frontmatter.context" class="field-input" :disabled="isImported" placeholder="Leave blank for always available" />
-                <span class="field-hint">Restrict when this skill appears (e.g., only in certain repos)</span>
+                <span class="field-hint">{{ t('skillsDetail.availabilityHint') }}</span>
               </div>
             </div>
 
             <div class="field-group">
-              <label class="field-label">Description</label>
+              <label class="field-label">{{ t('common.description') }}</label>
               <textarea v-model="frontmatter.description" rows="4" class="field-textarea" :disabled="isImported" />
-              <span class="field-hint">Helps Claude decide when to use this skill. Be specific about the trigger.</span>
+              <span class="field-hint">{{ t('skillsDetail.descriptionHint') }}</span>
             </div>
           </div>
         </div>
 
         <!-- MCP Server Info -->
         <div v-if="skill.mcpServer" class="space-y-3">
-          <label class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-tertiary);">Associated MCP Server</label>
+          <label class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-tertiary);">{{ t('skillsDetail.associatedMCPServer') }}</label>
           
           <NuxtLink 
             :to="`/mcp/${encodeURIComponent(skill.mcpServer.name)}?scope=${skill.mcpServer.scope}`"
@@ -322,9 +323,9 @@ useUnsavedChanges(isDirty)
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-[12px] font-medium truncate group-hover/mcp:text-accent transition-colors" style="color: var(--text-primary);">{{ skill.mcpServer.name }}</div>
-              <div class="text-[10px] truncate" style="color: var(--text-tertiary);">
-                This skill appears to be part of or uses the {{ skill.mcpServer.name }} MCP server.
-              </div>
+                <div class="text-[10px] truncate" style="color: var(--text-tertiary);">
+                  {{ t('skillsDetail.mcpServerDesc') }} {{ skill.mcpServer.name }} MCP server.
+                </div>
             </div>
             <div class="flex flex-col items-end gap-1 shrink-0">
               <span class="text-[9px] font-mono px-1.5 py-px rounded-full capitalize" style="background: var(--badge-subtle-bg); color: var(--text-tertiary); border: 1px solid var(--border-subtle);">{{ skill.mcpServer.scope }}</span>
@@ -337,7 +338,7 @@ useUnsavedChanges(isDirty)
 
         <!-- Agents using this skill -->
         <div v-if="skill.agents?.length" class="space-y-3">
-          <label class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-tertiary);">Agents Preloading This Skill</label>
+          <label class="text-[11px] font-semibold uppercase tracking-wider" style="color: var(--text-tertiary);">{{ t('skillsDetail.agentsPreloading') }}</label>
           
           <div class="space-y-2">
             <NuxtLink 
@@ -352,7 +353,7 @@ useUnsavedChanges(isDirty)
               </div>
               <div class="flex-1 min-w-0">
                 <div class="text-[12px] font-medium truncate group-hover/agent:text-accent transition-colors" style="color: var(--text-primary);">{{ agent.name }}</div>
-                <div class="text-[10px] truncate" style="color: var(--text-tertiary);">This agent will have this skill available in its context by default.</div>
+                <div class="text-[10px] truncate" style="color: var(--text-tertiary);">{{ t('skillsDetail.agentPreloadDesc') }}</div>
               </div>
               <div class="shrink-0">
                 <UIcon name="i-lucide-chevron-right" class="size-3.5 opacity-0 group-hover/agent:opacity-100 transition-all text-meta" />
@@ -360,7 +361,7 @@ useUnsavedChanges(isDirty)
             </NuxtLink>
           </div>
           <p class="text-[10px] leading-relaxed" style="color: var(--text-tertiary);">
-            These agents have this skill explicitly listed in their preloaded skills. You can manage this in each agent's settings.
+            {{ t('skillsDetail.agentPreloadManage') }}
           </p>
         </div>
 
@@ -377,7 +378,7 @@ useUnsavedChanges(isDirty)
         <details class="group">
           <summary class="text-[10px] cursor-pointer list-none flex items-center gap-1.5 text-meta hover:text-label transition-colors">
             <UIcon name="i-lucide-file" class="size-3" />
-            Show file location
+            {{ t('common.showFileLocation') }}
           </summary>
           <div class="mt-2 font-mono text-[10px] pl-4.5 text-meta break-all select-all py-1.5 px-2 rounded bg-card border border-subtle">
             {{ skill.filePath }}
@@ -394,13 +395,13 @@ useUnsavedChanges(isDirty)
     <UModal v-model:open="showDeleteConfirm">
       <template #content>
         <div class="p-6 space-y-4 bg-overlay">
-          <h3 class="text-page-title">Delete Skill</h3>
+          <h3 class="text-page-title">{{ t('skillsDetail.deleteSkill') }}</h3>
           <p class="text-[13px] text-label">
-            Permanently delete <strong>{{ skill?.frontmatter.name }}</strong>? This action cannot be undone.
+            {{ t('skillsDetail.deleteConfirmText') }} <strong>{{ skill?.frontmatter.name }}</strong>? {{ t('common.deleteConfirm') }}
           </p>
           <div class="flex justify-end gap-2">
-            <UButton label="Cancel" variant="ghost" color="neutral" size="sm" @click="showDeleteConfirm = false" />
-            <UButton label="Delete" color="error" size="sm" @click="deleteSkill" />
+            <UButton :label="t('common.cancel')" variant="ghost" color="neutral" size="sm" @click="showDeleteConfirm = false" />
+            <UButton :label="t('common.delete')" color="error" size="sm" @click="deleteSkill" />
           </div>
         </div>
       </template>

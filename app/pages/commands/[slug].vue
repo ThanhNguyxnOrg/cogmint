@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Command, CommandFrontmatter } from '~/types'
 import InstructionEditor from '~/components/studio/InstructionEditor.vue'
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -32,7 +33,7 @@ function restoreDraft() {
     frontmatter.value = draft.frontmatter as unknown as CommandFrontmatter
     body.value = draft.body
     clearDraft()
-    toast.add({ title: 'Draft restored', color: 'success' })
+    toast.add({ title: t('common.draftRestored'), color: 'success' })
   }
 }
 
@@ -43,14 +44,14 @@ onMounted(async () => {
     body.value = command.value.body
     allowedToolsStr.value = (command.value.frontmatter['allowed-tools'] || []).join(', ')
   } catch {
-    toast.add({ title: 'Command not found', color: 'error' })
+    toast.add({ title: t('commandsDetail.notFound'), color: 'error' })
     router.push('/commands')
   }
 })
 
 async function save() {
   if (!frontmatter.value.name.trim()) {
-    toast.add({ title: 'Name is required', color: 'error' })
+    toast.add({ title: t('common.nameRequired'), color: 'error' })
     return
   }
   saving.value = true
@@ -69,13 +70,13 @@ async function save() {
     const updated = await update(slug, payload)
     command.value = updated
     clearDraft()
-    toast.add({ title: 'Saved', color: 'success' })
+    toast.add({ title: t('common.saved'), color: 'success' })
 
     if (updated.slug !== slug) {
       router.push(`/commands/${updated.slug}`)
     }
   } catch (e: any) {
-    toast.add({ title: 'Failed to save', description: e.message, color: 'error' })
+    toast.add({ title: t('common.failedToSave'), description: e.message, color: 'error' })
   } finally {
     saving.value = false
   }
@@ -86,10 +87,10 @@ const showDeleteConfirm = ref(false)
 async function deleteCommand() {
   try {
     await remove(slug)
-    toast.add({ title: 'Deleted', color: 'success' })
+    toast.add({ title: t('common.deleted'), color: 'success' })
     router.push('/commands')
   } catch {
-    toast.add({ title: 'Failed to delete', color: 'error' })
+    toast.add({ title: t('common.failedToDelete'), color: 'error' })
   }
 }
 
@@ -127,7 +128,7 @@ useUnsavedChanges(isDirty)
   <div class="h-full flex flex-col">
     <PageHeader :title="command?.frontmatter.name || slug">
       <template #leading>
-        <NuxtLink to="/commands" class="focus-ring rounded p-1.5 -m-1.5" aria-label="Back to commands">
+        <NuxtLink to="/commands" class="focus-ring rounded p-1.5 -m-1.5" :aria-label="`Back to ${t('commands.title')}`">
           <UIcon name="i-lucide-arrow-left" class="size-4 text-label" />
         </NuxtLink>
       </template>
@@ -145,7 +146,7 @@ useUnsavedChanges(isDirty)
           size="sm"
           variant="ghost"
           color="neutral"
-          title="Use Command in Chat"
+          :title="t('commandsDetail.useInChat')"
           :disabled="!command"
           @click="prefillSkill(command!.frontmatter.name)"
         />
@@ -155,11 +156,11 @@ useUnsavedChanges(isDirty)
           size="sm"
           variant="ghost"
           color="neutral"
-          title="Open in Finder"
+          :title="t('common.openInFinder')"
           @click="reveal(command.filePath)"
         />
         <UButton
-          label="Delete"
+          :label="t('common.delete')"
           icon="i-lucide-trash-2"
           size="sm"
           variant="ghost"
@@ -167,7 +168,7 @@ useUnsavedChanges(isDirty)
           @click="showDeleteConfirm = true"
         />
         <UButton 
-          label="Save" 
+          :label="saving ? t('common.saving') : t('common.save')" 
           icon="i-lucide-save" 
           size="sm" 
           :loading="saving" 
@@ -190,40 +191,40 @@ useUnsavedChanges(isDirty)
           >
             <UIcon name="i-lucide-archive-restore" class="size-4 shrink-0" style="color: var(--info, #3b82f6);" />
             <span class="text-[12px] flex-1" style="color: var(--text-secondary);">
-              You have an unsaved draft from {{ draftAge }}.
+              {{ t('commandsDetail.unsavedDraft') }} {{ draftAge }}.
             </span>
-            <button class="text-[12px] font-medium px-2 py-1 rounded hover-bg" style="color: var(--info, #3b82f6);" @click="restoreDraft">Restore</button>
-            <button class="text-[12px] px-2 py-1 rounded hover-bg text-meta" @click="clearDraft">Dismiss</button>
+            <button class="text-[12px] font-medium px-2 py-1 rounded hover-bg" style="color: var(--info, #3b82f6);" @click="restoreDraft">{{ t('common.restore') }}</button>
+            <button class="text-[12px] px-2 py-1 rounded hover-bg text-meta" @click="clearDraft">{{ t('common.dismiss') }}</button>
           </div>
         </ClientOnly>
 
         <!-- Configuration -->
         <div class="rounded-xl p-5 space-y-4 bg-card">
-          <h3 class="text-section-label">Configuration</h3>
+          <h3 class="text-section-label">{{ t('common.configuration') }}</h3>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="field-group">
-              <label class="field-label">Name</label>
+              <label class="field-label">{{ t('common.name') }}</label>
               <input v-model="frontmatter.name" class="field-input" />
-              <span class="field-hint">The slash command name (e.g., "deploy" becomes /deploy)</span>
+              <span class="field-hint">{{ t('commandsDetail.expectedInputHint') }}</span>
             </div>
             <div class="field-group">
-              <label class="field-label">Expected Input</label>
+              <label class="field-label">{{ t('commandsDetail.expectedInput') }}</label>
               <input v-model="frontmatter['argument-hint']" class="field-input" placeholder="file name or topic" />
-              <span class="field-hint">Shown as a hint when users type this command</span>
+              <span class="field-hint">{{ t('commandsDetail.expectedInputHint') }}</span>
             </div>
           </div>
 
           <div class="field-group">
-            <label class="field-label">Description</label>
+            <label class="field-label">{{ t('common.description') }}</label>
             <textarea v-model="frontmatter.description" rows="4" class="field-textarea" />
-            <span class="field-hint">Helps Claude understand when to suggest this command</span>
+            <span class="field-hint">{{ t('commandsDetail.descriptionHint') }}</span>
           </div>
 
           <div class="field-group">
-            <label class="field-label">Tool Permissions</label>
+            <label class="field-label">{{ t('commandsDetail.toolPermissions') }}</label>
             <input v-model="allowedToolsStr" class="field-input" placeholder="Read, Write, Bash" />
-            <span class="field-hint">Restrict what Claude can do. Leave blank to allow all. Options: Read, Write, Edit, Bash, Glob, Grep</span>
+            <span class="field-hint">{{ t('commandsDetail.toolPermissionsHint') }}</span>
           </div>
         </div>
 
@@ -240,7 +241,7 @@ useUnsavedChanges(isDirty)
         <details class="group">
           <summary class="text-[10px] cursor-pointer list-none flex items-center gap-1.5 text-meta hover:text-label transition-colors">
             <UIcon name="i-lucide-file" class="size-3" />
-            Show file location
+            {{ t('common.showFileLocation') }}
           </summary>
           <div class="mt-2 font-mono text-[10px] pl-4.5 text-meta break-all select-all py-1.5 px-2 rounded bg-card border border-subtle">
             {{ command.filePath }}
@@ -257,13 +258,13 @@ useUnsavedChanges(isDirty)
     <UModal v-model:open="showDeleteConfirm">
       <template #content>
         <div class="p-6 space-y-4 bg-overlay">
-          <h3 class="text-page-title">Delete Command</h3>
+          <h3 class="text-page-title">{{ t('commandsDetail.deleteCommand') }}</h3>
           <p class="text-[13px] text-body">
-            Permanently delete <strong>/{{ command?.frontmatter.name }}</strong>? This action cannot be undone.
+            {{ t('commandsDetail.deleteConfirmText') }} <strong>/{{ command?.frontmatter.name }}</strong>? {{ t('common.deleteConfirm') }}
           </p>
           <div class="flex justify-end gap-2">
-            <UButton label="Cancel" variant="ghost" color="neutral" size="sm" @click="showDeleteConfirm = false" />
-            <UButton label="Delete" color="error" size="sm" @click="deleteCommand" />
+            <UButton :label="t('common.cancel')" variant="ghost" color="neutral" size="sm" @click="showDeleteConfirm = false" />
+            <UButton :label="t('common.delete')" color="error" size="sm" @click="deleteCommand" />
           </div>
         </div>
       </template>

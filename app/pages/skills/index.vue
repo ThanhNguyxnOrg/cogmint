@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 const { skills, loading, error, fetchAll: fetchSkills } = useSkills()
 const router = useRouter()
 const { workingDir } = useWorkingDir()
@@ -24,26 +25,26 @@ onMounted(() => {
 
 <template>
   <div>
-    <PageHeader title="Skills">
+    <PageHeader :title="t('skills.title')">
       <template #trailing>
         <span class="font-mono text-[12px] text-meta">{{ skills.length }}</span>
       </template>
       <template #right>
-        <UButton label="Import" icon="i-lucide-upload" size="sm" variant="soft" @click="showImportModal = true" />
-        <UButton label="New Skill" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
+        <UButton :label="t('skills.import')" icon="i-lucide-upload" size="sm" variant="soft" @click="showImportModal = true" />
+        <UButton :label="t('skills.newSkill')" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
       </template>
     </PageHeader>
 
     <div class="px-6 py-4">
       <p class="text-[13px] mb-4 leading-relaxed text-label">
-        Specific capabilities that can be added to agents and invoked as slash commands.
+        {{ t('skills.description') }}
       </p>
 
       <!-- Search -->
       <div class="mb-4">
         <input
           v-model="searchQuery"
-          placeholder="Search skills..."
+          :placeholder="t('skills.searchPlaceholder')"
           class="field-search max-w-xs"
         />
       </div>
@@ -147,7 +148,7 @@ onMounted(() => {
 
       <!-- Empty state: search miss -->
       <div v-else-if="searchQuery" class="flex flex-col items-center justify-center py-16">
-        <p class="text-[13px] text-label">No skills match your search.</p>
+        <p class="text-[13px] text-label">{{ t('skills.noSkillsMatch') }}</p>
       </div>
 
       <!-- Empty state: no skills -->
@@ -169,10 +170,10 @@ onMounted(() => {
             <span class="text-meta">skill</span>
           </div>
         </div>
-        <p class="text-[13px] text-label">Skills teach agents specific capabilities. Link a skill to an agent to extend what it can do.</p>
+        <p class="text-[13px] text-label">{{ t('skills.skillsTeachAgents') }}</p>
         <div class="flex items-center gap-2">
-          <UButton label="Create a skill" size="sm" @click="showCreateModal = true" />
-          <UButton label="Import from GitHub" size="sm" variant="outline" to="/explore?tab=imported" />
+          <UButton :label="t('skills.createASkill')" size="sm" @click="showCreateModal = true" />
+          <UButton :label="t('skills.importFromGitHub')" size="sm" variant="outline" to="/explore?tab=imported" />
         </div>
       </div>
     </div>
@@ -190,13 +191,13 @@ onMounted(() => {
     <UModal v-model:open="showImportModal">
       <template #content>
         <div class="p-6 space-y-4 bg-overlay">
-          <h3 class="text-page-title">Import Skill</h3>
+          <h3 class="text-page-title">{{ t('skills.importSkill') }}</h3>
           <FileImport
             type="skills"
             @imported="(s) => { showImportModal = false; fetchSkills(); router.push(`/skills/${s.slug}`) }"
           />
           <div class="flex justify-end">
-            <UButton label="Cancel" variant="ghost" color="neutral" size="sm" @click="showImportModal = false" />
+            <UButton :label="t('skills.cancel')" variant="ghost" color="neutral" size="sm" @click="showImportModal = false" />
           </div>
         </div>
       </template>

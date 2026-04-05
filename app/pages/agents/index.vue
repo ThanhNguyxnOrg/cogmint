@@ -2,6 +2,7 @@
 import { getAgentColor } from '~/utils/colors'
 import { getModelBadgeClasses } from '~/utils/models'
 import { agentTemplates } from '~/utils/templates'
+const { t } = useI18n()
 
 const { agents, loading, error, create, fetchAll: fetchAgents } = useAgents()
 const router = useRouter()
@@ -55,10 +56,10 @@ async function useTemplate(templateId: string) {
   creatingTemplate.value = templateId
   try {
     const agent = await create({ frontmatter: { ...template.frontmatter }, body: template.body })
-    toast.add({ title: `${template.frontmatter.name} created`, color: 'success' })
+    toast.add({ title: `${template.frontmatter.name} ${t('agents.created')}`, color: 'success' })
     router.push(`/agents/${agent.slug}`)
   } catch (e: any) {
-    toast.add({ title: 'Failed to create', description: e.data?.message || e.message, color: 'error' })
+    toast.add({ title: t('agents.failedToCreate'), description: e.data?.message || e.message, color: 'error' })
   } finally {
     creatingTemplate.value = null
   }
@@ -67,26 +68,26 @@ async function useTemplate(templateId: string) {
 
 <template>
   <div>
-    <PageHeader title="Agents">
+    <PageHeader :title="t('agents.title')">
       <template #trailing>
         <span class="text-[12px] text-meta">{{ agents.length }}</span>
       </template>
       <template #right>
-        <UButton label="Import" icon="i-lucide-upload" size="sm" variant="soft" @click="showImportModal = true" />
-        <UButton label="New Agent" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
+        <UButton :label="t('agents.import')" icon="i-lucide-upload" size="sm" variant="soft" @click="showImportModal = true" />
+        <UButton :label="t('agents.newAgent')" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
       </template>
     </PageHeader>
 
     <div class="px-6 py-4">
       <p class="text-[13px] mb-4 leading-relaxed text-label">
-        Specialized AI assistants with custom instructions and behavior.
+        {{ t('agents.description') }}
       </p>
 
       <!-- Search -->
       <div class="mb-5">
         <input
           v-model="searchQuery"
-          placeholder="Search agents..."
+          :placeholder="t('agents.searchPlaceholder')"
           class="field-search max-w-xs"
         />
       </div>
@@ -112,7 +113,7 @@ async function useTemplate(templateId: string) {
           <div v-if="hasGroups" class="flex items-center gap-2 mb-3">
             <UIcon name="i-lucide-folder" class="size-3.5 shrink-0" style="color: var(--text-meta);" />
             <span class="text-[11px] font-semibold uppercase tracking-widest" style="color: var(--text-meta);">
-              {{ directory || 'General' }}
+              {{ directory || t('agents.general') }}
             </span>
             <span class="text-[10px] px-1.5 py-0.5 rounded-full" style="background: var(--surface-raised); color: var(--text-disabled);">
               {{ groupAgents.length }}
@@ -169,7 +170,7 @@ async function useTemplate(templateId: string) {
               <div v-if="skillCounts[agent.slug]" class="mt-3 pt-3 relative" style="border-top: 1px solid var(--border-subtle);">
                 <span class="text-[10px] text-meta flex items-center gap-1.5">
                   <UIcon name="i-lucide-sparkles" class="size-3" style="color: var(--accent);" />
-                  {{ skillCounts[agent.slug] }} skill{{ skillCounts[agent.slug] === 1 ? '' : 's' }}
+                  {{ skillCounts[agent.slug] }} {{ skillCounts[agent.slug] === 1 ? t('agents.skill') : t('agents.skills') }}
                 </span>
               </div>
             </NuxtLink>
@@ -179,16 +180,16 @@ async function useTemplate(templateId: string) {
 
       <!-- Empty state: search miss -->
       <div v-else-if="searchQuery" class="flex flex-col items-center justify-center py-16 space-y-3">
-        <p class="text-[13px] text-label">No agents match your search.</p>
+        <p class="text-[13px] text-label">{{ t('agents.noAgentsMatch') }}</p>
       </div>
 
       <!-- Empty state: no agents — show templates -->
       <div v-else class="space-y-5">
         <div class="text-center py-4">
-          <p class="text-[13px] text-label">No agents yet. Start from a template or create your own.</p>
+          <p class="text-[13px] text-label">{{ t('agents.noAgentsYet') }}</p>
         </div>
 
-        <ExampleBlock title="What does a good agent look like?" class="max-w-md mx-auto mb-6">
+        <ExampleBlock :title="t('agents.whatDoesGoodAgentLookLike')" class="max-w-md mx-auto mb-6">
           <div class="space-y-2 text-[11px]" style="color: var(--text-secondary);">
             <div class="rounded-lg p-3" style="background: var(--surface-base); border: 1px solid var(--border-subtle);">
               <p><strong style="color: var(--text-primary);">code-reviewer</strong> <span class="text-[10px]" style="color: var(--text-disabled);">← This name is short and descriptive</span></p>
@@ -221,9 +222,9 @@ async function useTemplate(templateId: string) {
           </button>
         </div>
 
-        <div class="text-center">
-          <UButton label="Or create from scratch" variant="ghost" size="sm" @click="showCreateModal = true" />
-        </div>
+          <div class="text-center">
+            <UButton :label="t('agents.orCreateFromScratch')" variant="ghost" size="sm" @click="showCreateModal = true" />
+          </div>
       </div>
     </div>
 
@@ -239,13 +240,13 @@ async function useTemplate(templateId: string) {
     <UModal v-model:open="showImportModal">
       <template #content>
         <div class="p-6 space-y-4 bg-overlay">
-          <h3 class="text-page-title">Import Agent</h3>
+          <h3 class="text-page-title">{{ t('agents.importAgent') }}</h3>
           <FileImport
             type="agents"
             @imported="(a) => { showImportModal = false; fetchAgents(); router.push(`/agents/${a.slug}`) }"
           />
           <div class="flex justify-end">
-            <UButton label="Cancel" variant="ghost" color="neutral" size="sm" @click="showImportModal = false" />
+            <UButton :label="t('agents.cancel')" variant="ghost" color="neutral" size="sm" @click="showImportModal = false" />
           </div>
         </div>
       </template>

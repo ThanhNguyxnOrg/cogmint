@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getAgentColor } from "~/utils/colors";
 import { MODEL_IDS, getModelLabel, getModelColor, getModelBadgeClasses } from "~/utils/models";
+const { t } = useI18n();
 
 const { claudeDir, set: setDir } = useClaudeDir();
 const { agents, fetchAll: fetchAgents } = useAgents();
@@ -143,28 +144,28 @@ const statItems = computed(() => [
     key: "agents" as const,
     to: "/agents",
     count: animatedCounts.agents,
-    label: "Agents",
+    label: t('dashboard.agents'),
     icon: "i-lucide-cpu",
   },
   {
     key: "commands" as const,
     to: "/commands",
     count: animatedCounts.commands,
-    label: "Commands",
+    label: t('dashboard.commands'),
     icon: "i-lucide-terminal",
   },
   {
     key: "skills" as const,
     to: "/skills",
     count: animatedCounts.skills,
-    label: "Skills",
+    label: t('nav.skills'),
     icon: "i-lucide-sparkles",
   },
   {
     key: "plugins" as const,
     to: "/plugins",
     count: animatedCounts.plugins,
-    label: "Plugins",
+    label: t('nav.plugins'),
     icon: "i-lucide-puzzle",
   },
 ]);
@@ -172,7 +173,7 @@ const statItems = computed(() => [
 
 <template>
   <div>
-    <PageHeader title="Dashboard" />
+    <PageHeader :title="t('dashboard.title')" />
 
     <div class="px-6 py-5 stagger-section space-y-5">
       <!-- Hero stat bar -->
@@ -215,7 +216,7 @@ const statItems = computed(() => [
         class="rounded-xl px-5 py-4 bg-card"
       >
         <div class="flex items-center justify-between mb-3">
-          <span class="text-section-title">Model Distribution</span>
+          <span class="text-section-title">{{ t('dashboard.modelDistribution') }}</span>
           <span class="text-[11px] text-meta font-mono"
             >{{ totalAgents }} agent{{ totalAgents === 1 ? "" : "s" }}</span
           >
@@ -274,19 +275,19 @@ const statItems = computed(() => [
               border-bottom: 1px solid var(--border-subtle);
             "
           >
-            <h3 class="text-section-title flex items-center gap-2">
+            <span class="text-section-title flex items-center gap-2">
               <UIcon
                 name="i-lucide-cpu"
                 class="size-4"
                 style="color: var(--accent)"
               />
-              Agents
-            </h3>
+              {{ t('dashboard.agents') }}
+            </span>
             <NuxtLink
               to="/agents"
               class="text-[12px] focus-ring rounded px-1.5 py-0.5 hover-bg transition-colors"
               style="color: var(--accent)"
-              >View all</NuxtLink
+              >{{ t('dashboard.viewAll') }}</NuxtLink
             >
           </div>
           <div
@@ -357,19 +358,19 @@ const statItems = computed(() => [
                 border-bottom: 1px solid var(--border-subtle);
               "
             >
-              <h3 class="text-section-title flex items-center gap-2">
+                <h3 class="text-section-title flex items-center gap-2">
                 <UIcon
                   name="i-lucide-terminal"
                   class="size-4"
                   style="color: var(--accent)"
                 />
-                Commands
+                {{ t('dashboard.commands') }}
               </h3>
               <NuxtLink
                 to="/commands"
                 class="text-[12px] focus-ring rounded px-1.5 py-0.5 hover-bg transition-colors"
                 style="color: var(--accent)"
-                >View all</NuxtLink
+                >{{ t('dashboard.viewAll') }}</NuxtLink
               >
             </div>
             <div
@@ -418,9 +419,9 @@ const statItems = computed(() => [
                   />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="text-[13px] font-medium">Relationship Graph</div>
+                  <div class="text-[13px] font-medium">{{ t('dashboard.relationshipGraph') }}</div>
                   <div class="text-[11px] text-label">
-                    Visualize connections
+                    {{ t('dashboard.visualizeConnections') }}
                   </div>
                 </div>
                 <UIcon
@@ -449,8 +450,8 @@ const statItems = computed(() => [
                   />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="text-[13px] font-medium">Create Workflow</div>
-                  <div class="text-[11px] text-label">Multi-step pipelines</div>
+                  <div class="text-[13px] font-medium">{{ t('dashboard.createWorkflow') }}</div>
+                  <div class="text-[11px] text-label">{{ t('dashboard.multiStepPipelines') }}</div>
                 </div>
                 <UIcon
                   name="i-lucide-arrow-right"
@@ -478,8 +479,8 @@ const statItems = computed(() => [
                   />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="text-[13px] font-medium">Explore</div>
-                  <div class="text-[11px] text-label">Templates & extensions</div>
+                  <div class="text-[13px] font-medium">{{ t('dashboard.explore') }}</div>
+                  <div class="text-[11px] text-label">{{ t('dashboard.templatesExtensions') }}</div>
                 </div>
                 <UIcon
                   name="i-lucide-arrow-right"
@@ -510,13 +511,13 @@ const statItems = computed(() => [
             border-bottom: 1px solid var(--border-subtle);
           "
         >
-          <h3 class="text-section-title flex items-center gap-2">
-            <UIcon
-              name="i-lucide-lightbulb"
-              class="size-4"
-              style="color: var(--accent)"
-            />
-            Suggestions
+            <h3 class="text-section-title flex items-center gap-2">
+              <UIcon
+                name="i-lucide-lightbulb"
+                class="size-4"
+                style="color: var(--accent)"
+              />
+              {{ t('dashboard.suggestions') }}
           </h3>
           <span class="font-mono text-[10px] text-meta">{{
             suggestions.length
@@ -564,12 +565,11 @@ const statItems = computed(() => [
             name="i-lucide-settings"
             class="size-3"
           />
-          Advanced: Configuration folder
+          {{ t('dashboard.advanced') }}
         </summary>
         <div class="rounded-xl p-4 mt-2 bg-card">
           <p class="text-[12px] mb-3 text-label">
-            This is where Claude Code stores your agents, commands, and
-            settings. The default is ~/.claude.
+            {{ t('dashboard.advancedDescription') }}
           </p>
           <div class="flex items-center gap-3">
             <UIcon

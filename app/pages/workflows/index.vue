@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { workflowTemplates } from '~/utils/workflowTemplates'
 import { agentTemplates } from '~/utils/templates'
+const { t } = useI18n()
 
 const { workflows, loading, error, create, fetchAll } = useWorkflows()
 const { agents, create: createAgent } = useAgents()
@@ -41,7 +42,7 @@ async function useWorkflowTemplate(templateId: string) {
     const workflow = await create({ name: template.name, description: template.description, steps })
     router.push(`/workflows/${workflow.slug}`)
   } catch (e: any) {
-    toast.add({ title: 'Failed to create', description: e.data?.message || e.message, color: 'error' })
+    toast.add({ title: t('workflows.failedToCreate'), description: e.data?.message || e.message, color: 'error' })
   } finally {
     creatingTemplate.value = null
   }
@@ -61,7 +62,7 @@ async function createBlank() {
     newDescription.value = ''
     router.push(`/workflows/${workflow.slug}`)
   } catch (e: any) {
-    toast.add({ title: 'Failed to create', description: e.data?.message || e.message, color: 'error' })
+    toast.add({ title: t('workflows.failedToCreate'), description: e.data?.message || e.message, color: 'error' })
   } finally {
     creating.value = false
   }
@@ -70,25 +71,25 @@ async function createBlank() {
 
 <template>
   <div>
-    <PageHeader title="Workflows">
+    <PageHeader :title="t('workflows.title')">
       <template #trailing>
         <span class="text-[12px] text-meta">{{ workflows.length }}</span>
       </template>
       <template #right>
-        <UButton label="New Workflow" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
+        <UButton :label="t('workflows.newWorkflow')" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
       </template>
     </PageHeader>
 
     <div class="px-6 py-4">
       <p class="text-[13px] mb-4 leading-relaxed text-label">
-        Chain agents together into multi-step pipelines that pass work from one agent to the next.
+        {{ t('workflows.description') }}
       </p>
 
       <!-- Search -->
       <div v-if="workflows.length" class="mb-5">
         <input
           v-model="searchQuery"
-          placeholder="Search workflows..."
+          :placeholder="t('workflows.searchPlaceholder')"
           class="field-search max-w-xs"
         />
       </div>
@@ -119,7 +120,7 @@ async function createBlank() {
 
       <!-- Empty state: search miss -->
       <div v-else-if="searchQuery" class="flex flex-col items-center justify-center py-16 space-y-3">
-        <p class="text-[13px] text-label">No workflows match your search.</p>
+        <p class="text-[13px] text-label">{{ t('workflows.noWorkflowsMatch') }}</p>
       </div>
 
       <!-- Empty state: no workflows — show templates -->
@@ -133,13 +134,13 @@ async function createBlank() {
               <UIcon name="i-lucide-git-branch" class="size-6" style="color: var(--accent);" />
             </div>
           </div>
-          <h3 class="text-[18px] font-semibold tracking-tight" style="color: var(--text-primary); font-family: var(--font-display);">Chain your agents together</h3>
+          <h3 class="text-[18px] font-semibold tracking-tight" style="color: var(--text-primary); font-family: var(--font-display);">{{ t('workflows.chainYourAgents') }}</h3>
           <p class="text-[13px] text-label max-w-md mx-auto">
-            Create workflows that pass work from one agent to the next. Start from a template or create your own.
+            {{ t('workflows.createWorkflowsDesc') }}
           </p>
         </div>
 
-        <h4 class="text-section-label">Templates</h4>
+        <h4 class="text-section-label">{{ t('workflows.templates') }}</h4>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <button
             v-for="template in workflowTemplates"
@@ -173,7 +174,7 @@ async function createBlank() {
         </div>
 
         <div class="text-center">
-          <UButton label="Or create from scratch" variant="ghost" size="sm" @click="showCreateModal = true" />
+          <UButton :label="t('workflows.orCreateFromScratch')" variant="ghost" size="sm" @click="showCreateModal = true" />
         </div>
       </div>
     </div>
@@ -182,28 +183,28 @@ async function createBlank() {
     <UModal v-model:open="showCreateModal">
       <template #content>
         <div class="p-6 space-y-4 bg-overlay">
-          <h3 class="text-page-title">New Workflow</h3>
+          <h3 class="text-page-title">{{ t('workflows.newWorkflowModal') }}</h3>
           <form class="space-y-3" @submit.prevent="createBlank">
             <div>
-              <label class="text-[12px] font-medium text-label block mb-1">Name</label>
+              <label class="text-[12px] font-medium text-label block mb-1">{{ t('workflows.name') }}</label>
               <input
                 v-model="newName"
-                placeholder="My Workflow"
+                :placeholder="t('workflows.namePlaceholder')"
                 class="field-input w-full"
                 required
               />
             </div>
             <div>
-              <label class="text-[12px] font-medium text-label block mb-1">Description</label>
+              <label class="text-[12px] font-medium text-label block mb-1">{{ t('workflows.descriptionLabel') }}</label>
               <input
                 v-model="newDescription"
-                placeholder="What does this workflow do?"
+                :placeholder="t('workflows.descriptionPlaceholder')"
                 class="field-input w-full"
               />
             </div>
             <div class="flex justify-end gap-2 pt-2">
-              <UButton label="Cancel" variant="ghost" color="neutral" size="sm" @click="showCreateModal = false" />
-              <UButton type="submit" label="Create" size="sm" :loading="creating" :disabled="!newName.trim()" />
+              <UButton :label="t('workflows.cancel')" variant="ghost" color="neutral" size="sm" @click="showCreateModal = false" />
+              <UButton type="submit" :label="t('workflows.create')" size="sm" :loading="creating" :disabled="!newName.trim()" />
             </div>
           </form>
         </div>

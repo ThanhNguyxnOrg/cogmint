@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 const { commands, loading, error, groupedByDirectory, remove } = useCommands()
 const router = useRouter()
 const toast = useToast()
@@ -36,25 +37,25 @@ const filteredCount = computed(() =>
 
 <template>
   <div>
-    <PageHeader title="Commands">
+    <PageHeader :title="t('commands.title')">
       <template #trailing>
         <span class="font-mono text-[12px] text-meta">{{ commands.length }}</span>
       </template>
       <template #right>
-        <UButton label="New Command" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
+        <UButton :label="t('commands.newCommand')" icon="i-lucide-plus" size="sm" @click="showCreateModal = true" />
       </template>
     </PageHeader>
 
     <div class="px-6 py-4">
       <p class="text-[13px] mb-4 leading-relaxed text-label">
-        Reusable workflows you can trigger with a slash command (e.g., /deploy).
+        {{ t('commands.description') }}
       </p>
 
       <!-- Search -->
       <div class="mb-4">
         <input
           v-model="searchQuery"
-          placeholder="Search commands..."
+          :placeholder="t('commands.searchPlaceholder')"
           class="field-search max-w-xs"
         />
       </div>
@@ -131,18 +132,18 @@ const filteredCount = computed(() =>
 
       <!-- Empty state: search miss -->
       <div v-else-if="searchQuery" class="flex flex-col items-center justify-center py-16">
-        <p class="text-[13px] text-label">No commands match your search.</p>
+        <p class="text-[13px] text-label">{{ t('commands.noCommandsMatch') }}</p>
       </div>
 
       <!-- Empty state: no commands -->
       <div v-else class="flex flex-col items-center justify-center py-12 space-y-5">
         <div class="rounded-lg p-4 bg-card max-w-sm w-full font-mono text-[12px] text-label leading-relaxed">
-          <span class="text-meta"># Example: a deploy command</span><br>
+          <span class="text-meta">{{ t('commands.exampleDeploy') }}</span><br>
           <span style="color: var(--accent);">/deploy</span> staging --skip-tests<br>
-          <span class="text-meta"># Claude follows your command's instructions</span>
+          <span class="text-meta">{{ t('commands.claudeFollows') }}</span>
         </div>
-        <p class="text-[13px] text-label">Commands let you trigger repeatable workflows with a slash.</p>
-        <UButton label="Create a command" size="sm" @click="showCreateModal = true" />
+        <p class="text-[13px] text-label">{{ t('commands.commandsLetYou') }}</p>
+        <UButton :label="t('commands.createACommand')" size="sm" @click="showCreateModal = true" />
       </div>
     </div>
 

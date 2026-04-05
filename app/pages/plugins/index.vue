@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 const { plugins, loading, error, fetchAll, toggleEnabled } = usePlugins()
 const { fetchAvailable } = useMarketplace()
 const toast = useToast()
@@ -34,9 +35,9 @@ const groupedByMarketplace = computed(() => {
 async function onToggle(id: string, enabled: boolean) {
   try {
     await toggleEnabled(id, enabled)
-    toast.add({ title: `Plugin ${enabled ? 'enabled' : 'disabled'}`, color: 'success' })
+    toast.add({ title: `Plugin ${enabled ? t('plugins.enabled') : t('plugins.disabled')}`, color: 'success' })
   } catch {
-    toast.add({ title: 'Failed to update', color: 'error' })
+    toast.add({ title: t('plugins.failedToUpdate'), color: 'error' })
   }
 }
 
@@ -52,13 +53,13 @@ function onPluginInstalled() {
 
 <template>
   <div>
-    <PageHeader title="Plugins">
+    <PageHeader :title="t('plugins.title')">
       <template #trailing>
         <span class="font-mono text-[12px] text-meta">{{ plugins.length }}</span>
       </template>
       <template #right>
         <UButton
-          label="Add Plugin"
+          :label="t('plugins.addPlugin')"
           icon="i-lucide-plus"
           size="sm"
           variant="soft"
@@ -69,14 +70,14 @@ function onPluginInstalled() {
 
     <div class="px-6 py-4">
       <p class="text-[13px] mb-4 leading-relaxed text-label">
-        Pre-built extensions that add new features and capabilities.
+        {{ t('plugins.description') }}
       </p>
 
       <!-- Search -->
       <div class="mb-4">
         <input
           v-model="searchQuery"
-          placeholder="Search plugins..."
+          :placeholder="t('plugins.searchPlaceholder')"
           class="field-search max-w-xs"
         />
       </div>
@@ -151,7 +152,7 @@ function onPluginInstalled() {
                     class="font-mono text-[10px] text-meta"
                     :title="plugin.skills.join(', ')"
                   >
-                    {{ plugin.skills.length }} skill{{ plugin.skills.length === 1 ? '' : 's' }}
+                    {{ plugin.skills.length }} {{ plugin.skills.length === 1 ? t('plugins.skill') : t('plugins.skills') }}
                   </span>
                   <span class="font-mono text-[10px] text-meta">
                     {{ formatDate(plugin.installedAt) }}
@@ -169,7 +170,7 @@ function onPluginInstalled() {
 
       <!-- Empty state: search miss -->
       <div v-else-if="searchQuery" class="flex flex-col items-center justify-center py-16">
-        <p class="text-[13px] text-label">No plugins match your search.</p>
+        <p class="text-[13px] text-label">{{ t('plugins.noPluginsMatch') }}</p>
       </div>
 
       <!-- Empty state: no plugins -->
@@ -179,9 +180,9 @@ function onPluginInstalled() {
             <UIcon name="i-lucide-puzzle" class="size-8 text-accent" />
           </div>
           <div class="space-y-4">
-            <p class="text-[13px] text-body font-sans font-medium">No plugins installed yet</p>
+            <p class="text-[13px] text-body font-sans font-medium">{{ t('plugins.noPluginsInstalled') }}</p>
             <div class="px-3 py-2 rounded-lg bg-surface-base text-meta border border-border-subtle text-left overflow-hidden">
-              <span class="opacity-50"># Install via CLI</span><br/>
+              <span class="opacity-50">{{ t('plugins.installViaCli') }}</span><br/>
               <span class="text-accent">claude</span> plugin add &lt;name&gt;
             </div>
           </div>
@@ -189,13 +190,13 @@ function onPluginInstalled() {
         
         <div class="flex gap-3">
           <UButton
-            label="Browse Marketplace"
+            :label="t('plugins.browseMarketplace')"
             icon="i-lucide-store"
             variant="soft"
             to="/explore?tab=marketplace"
           />
           <UButton
-            label="Quick Install"
+            :label="t('plugins.quickInstall')"
             icon="i-lucide-plus"
             @click="showAddPluginModal = true"
           />

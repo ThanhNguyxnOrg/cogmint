@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+const { t } = useI18n()
 
 const { servers, loading, error, fetchServers, addServer, toggleServer, removeServer } = useMCP()
 const { isPanelOpen, pendingInput } = useChat()
@@ -28,19 +29,19 @@ function testServer(name: string) {
 
 <template>
   <div class="h-full overflow-y-auto custom-scrollbar flex flex-col">
-    <PageHeader title="MCP Servers">
+    <PageHeader :title="t('mcp.title')">
       <template #trailing>
         <span class="font-mono text-[12px] text-meta mr-4">{{ servers.length }}</span>
       </template>
       <template #right>
-        <UButton label="Import" icon="i-lucide-upload" size="sm" variant="soft" @click="showImportModal = true" />
-        <UButton label="New MCP Server" icon="i-lucide-plus" size="sm" @click="isAddModalOpen = true" />
+        <UButton :label="t('mcp.import')" icon="i-lucide-upload" size="sm" variant="soft" @click="showImportModal = true" />
+        <UButton :label="t('mcp.newServer')" icon="i-lucide-plus" size="sm" @click="isAddModalOpen = true" />
       </template>
     </PageHeader>
 
     <div class="px-6 py-4 flex-1">
       <p class="text-[13px] mb-6 leading-relaxed text-label max-w-2xl">
-        Manage Model Context Protocol (MCP) servers. Global servers are available across all your projects, while project servers are scoped to your current working directory.
+        {{ t('mcp.description') }}
       </p>
 
       <div v-if="error" class="rounded-xl px-4 py-3 mb-6 flex items-start gap-3 border-error bg-error-subtle">
@@ -53,7 +54,7 @@ function testServer(name: string) {
       </div>
       <div v-else-if="servers.length === 0" class="flex flex-col items-center justify-center py-12 border border-dashed rounded-xl border-subtle">
         <UIcon name="i-lucide-server" class="size-8 text-meta mb-3" />
-        <p class="text-[13px] text-secondary">No MCP servers configured.</p>
+        <p class="text-[13px] text-secondary">{{ t('mcp.noServers') }}</p>
       </div>
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <NuxtLink
@@ -75,9 +76,9 @@ function testServer(name: string) {
                 <span v-if="server.transport" class="text-[10px] px-1.5 py-0.5 rounded font-medium tracking-wide uppercase bg-surface-raised text-meta border border-subtle">
                   {{ server.transport }}
                 </span>
-                <span v-if="server.disabled" class="text-[10px] px-1.5 py-0.5 rounded font-medium tracking-wide uppercase bg-error/10 text-error border border-error/20">
-                  Disabled
-                </span>
+                  <span v-if="server.disabled" class="text-[10px] px-1.5 py-0.5 rounded font-medium tracking-wide uppercase bg-error/10 text-error border border-error/20">
+                    {{ t('mcp.disabled') }}
+                  </span>
               </div>
               <div v-if="server.transport === 'stdio'" class="text-[12px] font-mono text-meta truncate" :title="server.command + ' ' + (server.args?.join(' ') || '')" :class="{ 'opacity-50': server.disabled }">
                 {{ server.command }} <span v-if="server.args?.length">{{ server.args.join(' ') }}</span>
@@ -122,9 +123,9 @@ function testServer(name: string) {
     <UModal v-model:open="showImportModal">
       <template #content>
         <div class="p-6 space-y-4 bg-overlay rounded-2xl border border-subtle">
-          <h3 class="text-page-title">Import MCP Config</h3>
+          <h3 class="text-page-title">{{ t('mcp.importConfig') }}</h3>
           <p class="text-[12px] text-secondary opacity-80 leading-relaxed">
-            Upload a <code class="font-mono text-[11px] px-1 py-px rounded bg-surface-raised">.json</code> file (e.g., your <code class="font-mono text-[11px] px-1 py-px rounded bg-surface-raised">~/.claude.json</code> or <code class="font-mono text-[11px] px-1 py-px rounded bg-surface-raised">claude_desktop_config.json</code>). Servers will be merged into your global configuration.
+            {{ t('mcp.importConfigDesc') }}
           </p>
           <FileImport
             type="mcp"

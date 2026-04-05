@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PluginDetail, SkillFrontmatter } from '~/types'
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +29,7 @@ onMounted(async () => {
       skillBodies.value[skill.slug] = skill.body
     }
   } catch {
-    toast.add({ title: 'Plugin not found', color: 'error' })
+    toast.add({ title: t('pluginsDetail.notFound'), color: 'error' })
     router.push('/plugins')
   } finally {
     loading.value = false
@@ -79,9 +80,9 @@ async function saveSkill(slug: string) {
       skill.frontmatter = { ...fm }
       skill.body = body
     }
-    toast.add({ title: 'Skill saved', color: 'success' })
+    toast.add({ title: t('pluginsDetail.skillSaved'), color: 'success' })
   } catch (e: any) {
-    toast.add({ title: 'Failed to save', description: e.message, color: 'error' })
+    toast.add({ title: t('common.failedToSave'), description: e.message, color: 'error' })
   } finally {
     savingSkill.value = false
   }
@@ -91,9 +92,9 @@ async function onToggle(enabled: boolean) {
   try {
     await toggleEnabled(id, enabled)
     if (plugin.value) plugin.value.enabled = enabled
-    toast.add({ title: `Plugin ${enabled ? 'enabled' : 'disabled'}`, color: 'success' })
+    toast.add({ title: `Plugin ${enabled ? t('plugins.enabled') : t('plugins.disabled')}`, color: 'success' })
   } catch {
-    toast.add({ title: 'Failed to update', color: 'error' })
+    toast.add({ title: t('plugins.failedToUpdate'), color: 'error' })
   }
 }
 
@@ -101,10 +102,10 @@ async function onUninstall() {
   uninstalling.value = true
   try {
     await uninstall(id)
-    toast.add({ title: 'Plugin uninstalled', color: 'success' })
+    toast.add({ title: t('pluginsDetail.uninstalled'), color: 'success' })
     router.push('/plugins')
   } catch (e: any) {
-    toast.add({ title: 'Failed to uninstall', description: e.message, color: 'error' })
+    toast.add({ title: t('pluginsDetail.failedToUninstall'), description: e.message, color: 'error' })
   } finally {
     uninstalling.value = false
   }
@@ -131,7 +132,7 @@ if (import.meta.client) {
   <div>
     <PageHeader :title="plugin?.name || id">
       <template #leading>
-        <NuxtLink to="/plugins" class="focus-ring rounded p-1.5 -m-1.5" aria-label="Back to plugins">
+        <NuxtLink to="/plugins" class="focus-ring rounded p-1.5 -m-1.5" :aria-label="`Back to ${t('plugins.title')}`">
           <UIcon name="i-lucide-arrow-left" class="size-4 text-label" />
         </NuxtLink>
       </template>
@@ -146,9 +147,9 @@ if (import.meta.client) {
           class="text-[12px] px-2 py-1 rounded focus-ring text-label"
           @click="showUninstallConfirm = true"
         >
-          Uninstall
+          {{ t('pluginsDetail.uninstall') }}
         </button>
-        <label v-if="plugin" class="field-toggle" title="Enable/disable plugin">
+        <label v-if="plugin" class="field-toggle" :title="t('pluginsDetail.enableToggle')">
           <input
             type="checkbox"
             :checked="plugin.enabled"
@@ -200,7 +201,7 @@ if (import.meta.client) {
                   class="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full shrink-0 badge"
                   :class="plugin.enabled ? 'badge-success' : 'badge-subtle'"
                 >
-                  {{ plugin.enabled ? 'enabled' : 'disabled' }}
+                  {{ plugin.enabled ? t('plugins.enabled') : t('plugins.disabled') }}
                 </span>
               </div>
               <p v-if="plugin.description" class="text-[12px] mt-1 leading-relaxed text-label">
@@ -213,19 +214,19 @@ if (import.meta.client) {
         <!-- Metadata -->
         <div class="px-5 py-3 flex items-center gap-6 flex-wrap" style="background: var(--surface-base); border-top: 1px solid var(--border-subtle);">
           <div class="flex items-center gap-1.5">
-            <span class="text-[12px] text-meta">Marketplace</span>
+            <span class="text-[12px] text-meta">{{ t('pluginsDetail.marketplace') }}</span>
             <span class="font-mono text-[12px] text-body">{{ plugin.marketplace }}</span>
           </div>
           <div v-if="plugin.author" class="flex items-center gap-1.5">
-            <span class="text-[12px] text-meta">Author</span>
+            <span class="text-[12px] text-meta">{{ t('pluginsDetail.author') }}</span>
             <span class="font-mono text-[12px] text-body">{{ plugin.author.name }}</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="text-[12px] text-meta">Installed</span>
+            <span class="text-[12px] text-meta">{{ t('pluginsDetail.installed') }}</span>
             <span class="font-mono text-[12px] text-body">{{ formatDate(plugin.installedAt) }}</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="text-[12px] text-meta">Skills</span>
+            <span class="text-[12px] text-meta">{{ t('pluginsDetail.skillsCount') }}</span>
             <span class="font-mono text-[12px] text-body">{{ plugin.skillDetails.length }}</span>
           </div>
         </div>
@@ -233,7 +234,7 @@ if (import.meta.client) {
 
       <!-- Skills -->
       <div v-if="plugin.skillDetails.length">
-        <h3 class="text-section-label mb-3">Skills</h3>
+        <h3 class="text-section-label mb-3">{{ t('pluginsDetail.skillsCount') }}</h3>
         <div class="space-y-2">
           <div
             v-for="skill in plugin.skillDetails"
@@ -278,7 +279,7 @@ if (import.meta.client) {
             <div v-if="editingSkill === skill.slug" style="border-top: 1px solid var(--border-subtle);">
               <!-- Skill frontmatter fields -->
               <div class="px-5 py-4 space-y-4" style="background: var(--surface-base);">
-                <h4 class="text-section-label">Configuration</h4>
+                <h4 class="text-section-label">{{ t('common.configuration') }}</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div class="field-group">
                     <label class="field-label">Name</label>
@@ -320,7 +321,7 @@ if (import.meta.client) {
               <!-- Body editor -->
               <div style="border-top: 1px solid var(--border-subtle);">
                 <div class="flex items-center justify-between px-4 py-2.5" style="background: var(--surface-raised); border-bottom: 1px solid var(--border-subtle);">
-                  <h4 class="text-section-label">Instructions</h4>
+                  <h4 class="text-section-label">{{ t('pluginsDetail.instructions') }}</h4>
                   <div class="flex items-center gap-3">
                     <span class="font-mono text-[10px] text-meta">
                       {{ getSkillBody(skill.slug).split('\n').length }} lines
@@ -345,7 +346,7 @@ if (import.meta.client) {
                 <span class="font-mono text-[10px] truncate text-meta">
                   {{ skill.filePath }}
                 </span>
-                <UButton label="Save Skill" icon="i-lucide-save" size="sm" :loading="savingSkill" @click="saveSkill(skill.slug)" />
+                <UButton :label="t('pluginsDetail.saveSkill')" icon="i-lucide-save" size="sm" :loading="savingSkill" @click="saveSkill(skill.slug)" />
               </div>
             </div>
           </div>
@@ -355,14 +356,14 @@ if (import.meta.client) {
       <!-- No skills -->
       <div v-else class="flex flex-col items-center justify-center py-12 space-y-3">
         <UIcon name="i-lucide-puzzle" class="size-8 text-meta" />
-        <p class="text-[13px] text-label">This plugin has no skills.</p>
+        <p class="text-[13px] text-label">{{ t('pluginsDetail.noSkills') }}</p>
       </div>
 
       <!-- File location (collapsed) -->
       <details class="group">
         <summary class="text-[10px] cursor-pointer list-none flex items-center gap-1.5 text-meta">
           <UIcon name="i-lucide-file" class="size-3" />
-          Show file location
+          {{ t('common.showFileLocation') }}
         </summary>
         <div class="mt-1 font-mono text-[10px] pl-4.5 text-meta">
           {{ plugin.installPath }}
@@ -374,13 +375,13 @@ if (import.meta.client) {
     <UModal v-model:open="showUninstallConfirm">
       <template #content>
         <div class="p-6 space-y-4 bg-overlay">
-          <h3 class="text-page-title">Uninstall Plugin</h3>
+          <h3 class="text-page-title">{{ t('pluginsDetail.uninstallPlugin') }}</h3>
           <p class="text-[13px] text-body">
-            Uninstall <strong>{{ plugin?.name }}</strong>? The plugin will be removed but its files will remain on your computer.
+            {{ t('pluginsDetail.uninstall') }} <strong>{{ plugin?.name }}</strong>? {{ t('pluginsDetail.uninstallConfirmText') }}
           </p>
           <div class="flex justify-end gap-2">
-            <UButton label="Cancel" variant="ghost" color="neutral" size="sm" @click="showUninstallConfirm = false" />
-            <UButton label="Uninstall" color="error" size="sm" :loading="uninstalling" @click="onUninstall" />
+            <UButton :label="t('common.cancel')" variant="ghost" color="neutral" size="sm" @click="showUninstallConfirm = false" />
+            <UButton :label="t('pluginsDetail.uninstall')" color="error" size="sm" :loading="uninstalling" @click="onUninstall" />
           </div>
         </div>
       </template>

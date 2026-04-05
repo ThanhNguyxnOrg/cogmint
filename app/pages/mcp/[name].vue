@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -138,13 +139,13 @@ useUnsavedChanges(isDirty)
         </NuxtLink>
         <UIcon name="i-lucide-server" class="size-4" style="color: var(--accent);" />
         <h1 class="text-[16px] font-semibold tracking-tight" style="color: var(--text-primary); font-family: var(--font-display);">
-          {{ loading ? 'Loading...' : name }}
+          {{ loading ? t('common.loading') : name }}
         </h1>
-        <span v-if="isDirty" class="text-[9px] font-mono px-1.5 py-px rounded-full" style="background: rgba(229, 169, 62, 0.1); color: var(--accent);">Unsaved</span>
+        <span v-if="isDirty" class="text-[9px] font-mono px-1.5 py-px rounded-full" style="background: rgba(229, 169, 62, 0.1); color: var(--accent);">{{ t('common.unsaved') }}</span>
       </div>
       <div class="flex items-center gap-2">
         <UButton
-          :label="saving ? 'Saving...' : 'Save'"
+          :label="saving ? t('mcpDetail.saving') : t('mcpDetail.save')"
           icon="i-lucide-save"
           size="sm"
           :variant="isDirty ? 'solid' : 'soft'"
@@ -154,12 +155,12 @@ useUnsavedChanges(isDirty)
           @click="save"
         />
         <UButton
-          label="Delete"
+          :label="t('common.delete')"
           icon="i-lucide-trash-2"
           size="sm"
           variant="ghost"
           color="error"
-          title="Delete server"
+          :title="t('mcpDetail.deleteServer')"
           @click="showDeleteConfirm = true"
         />
       </div>
@@ -177,19 +178,19 @@ useUnsavedChanges(isDirty)
         <div class="px-8 py-6 space-y-8">
           <!-- Basic Info -->
           <section class="space-y-4">
-            <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">Basic Information</h3>
+            <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">{{ t('mcpDetail.basicInfo') }}</h3>
             <div class="grid grid-cols-2 gap-6">
               <div class="space-y-1.5">
-                <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">Server Name</label>
+                <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">{{ t('mcpDetail.serverName') }}</label>
                 <input v-model="form.name" type="text" class="field-input w-full" />
               </div>
               <div class="space-y-1.5">
-                <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">Scope</label>
+                <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">{{ t('mcpDetail.scope') }}</label>
                 <select v-model="form.scope" class="field-input w-full" disabled>
-                  <option value="global">Global (~/.claude.json)</option>
-                  <option value="project">Project (.mcp.json)</option>
+                  <option value="global">{{ t('mcpDetail.scopeGlobal') }}</option>
+                  <option value="project">{{ t('mcpDetail.scopeProject') }}</option>
                 </select>
-                <p class="text-[10px] italic opacity-60" style="color: var(--text-tertiary);">Scope cannot be changed after creation.</p>
+                <p class="text-[10px] italic opacity-60" style="color: var(--text-tertiary);">{{ t('mcpDetail.scopeLocked') }}</p>
               </div>
             </div>
             <div class="flex items-center gap-2 pt-2">
@@ -205,10 +206,10 @@ useUnsavedChanges(isDirty)
               </label>
               <div class="flex flex-col">
                 <span class="text-[13px] font-medium" :class="form.disabled ? 'text-secondary' : 'text-primary'">
-                  {{ form.disabled ? 'Server Disabled' : 'Server Enabled' }}
+                  {{ form.disabled ? t('mcpDetail.serverDisabled') : t('mcpDetail.serverEnabled') }}
                 </span>
                 <span class="text-[11px] text-tertiary opacity-60">
-                  {{ form.disabled ? 'This server will not be loaded by Claude.' : 'This server is active and available for use.' }}
+                  {{ form.disabled ? t('mcpDetail.disabledDesc') : t('mcpDetail.enabledDesc') }}
                 </span>
               </div>
             </div>
@@ -216,18 +217,18 @@ useUnsavedChanges(isDirty)
 
           <!-- Transport -->
           <section class="space-y-4">
-            <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">Transport Configuration</h3>
+            <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">{{ t('mcpDetail.transport') }}</h3>
             <div class="space-y-4">
               <div class="space-y-1.5">
-                <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">Transport Type</label>
+                <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">{{ t('mcpDetail.transportType') }}</label>
                 <div class="flex gap-6 pt-1">
                   <label class="flex items-center gap-2 cursor-pointer group">
                     <input v-model="form.transport" type="radio" value="stdio" class="accent-accent" />
-                    <span class="text-[13px] group-hover:opacity-100 transition-opacity" :class="form.transport === 'stdio' ? 'opacity-100 font-medium' : 'opacity-60'">stdio (Local)</span>
+                    <span class="text-[13px] group-hover:opacity-100 transition-opacity" :class="form.transport === 'stdio' ? 'opacity-100 font-medium' : 'opacity-60'">{{ t('mcpDetail.stdio') }}</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer group">
                     <input v-model="form.transport" type="radio" value="sse" class="accent-accent" />
-                    <span class="text-[13px] group-hover:opacity-100 transition-opacity" :class="form.transport === 'sse' ? 'opacity-100 font-medium' : 'opacity-60'">sse (Remote)</span>
+                    <span class="text-[13px] group-hover:opacity-100 transition-opacity" :class="form.transport === 'sse' ? 'opacity-100 font-medium' : 'opacity-60'">{{ t('mcpDetail.sse') }}</span>
                   </label>
                 </div>
               </div>
@@ -235,11 +236,11 @@ useUnsavedChanges(isDirty)
               <template v-if="form.transport === 'stdio'">
                 <div class="space-y-4">
                   <div class="space-y-1.5">
-                    <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">Command</label>
+                    <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">{{ t('mcpDetail.command') }}</label>
                     <input v-model="form.command" type="text" class="field-input w-full font-mono text-[13px]" placeholder="e.g. npx" />
                   </div>
                   <div class="space-y-1.5">
-                    <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">Arguments</label>
+                    <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">{{ t('mcpDetail.arguments') }}</label>
                     <input v-model="form.argsString" type="text" class="field-input w-full font-mono text-[13px]" placeholder="e.g. -y @modelcontextprotocol/server-github" />
                   </div>
                 </div>
@@ -247,7 +248,7 @@ useUnsavedChanges(isDirty)
 
               <template v-else>
                 <div class="space-y-1.5">
-                  <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">URL</label>
+                  <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">{{ t('mcpDetail.url') }}</label>
                   <input v-model="form.url" type="text" class="field-input w-full font-mono text-[13px]" placeholder="https://example.com/sse" />
                 </div>
               </template>
@@ -258,9 +259,9 @@ useUnsavedChanges(isDirty)
           <section class="space-y-4">
             <div v-if="form.transport === 'stdio'">
               <div class="flex items-center justify-between mb-2">
-                <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">Environment Variables</h3>
+                <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">{{ t('mcpDetail.envVars') }}</h3>
                 <button class="text-[11px] font-medium transition-colors" style="color: var(--accent);" @click="addEnvRow">
-                  + Add Row
+                  {{ t('mcpDetail.addEnvRow') }}
                 </button>
               </div>
               <div class="space-y-2">
@@ -273,16 +274,16 @@ useUnsavedChanges(isDirty)
                   </button>
                 </div>
                 <div v-if="!form.envPairs.length" class="py-4 border border-dashed rounded-xl flex flex-col items-center justify-center opacity-40" style="border-color: var(--border-subtle);">
-                  <p class="text-[12px]">No environment variables configured</p>
+                  <p class="text-[12px]">{{ t('mcpDetail.noEnvVars') }}</p>
                 </div>
               </div>
             </div>
 
             <div v-else>
               <div class="flex items-center justify-between mb-2">
-                <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">Headers</h3>
+                <h3 class="text-[13px] font-semibold tracking-wider uppercase opacity-50" style="color: var(--text-primary);">{{ t('mcpDetail.headers') }}</h3>
                 <button class="text-[11px] font-medium transition-colors" style="color: var(--accent);" @click="addHeaderRow">
-                  + Add Row
+                  {{ t('mcpDetail.addHeaderRow') }}
                 </button>
               </div>
               <div class="space-y-2">
@@ -295,7 +296,7 @@ useUnsavedChanges(isDirty)
                   </button>
                 </div>
                 <div v-if="!form.headerPairs.length" class="py-4 border border-dashed rounded-xl flex flex-col items-center justify-center opacity-40" style="border-color: var(--border-subtle);">
-                  <p class="text-[12px]">No custom headers configured</p>
+                  <p class="text-[12px]">{{ t('mcpDetail.noHeaders') }}</p>
                 </div>
               </div>
             </div>
@@ -316,11 +317,11 @@ useUnsavedChanges(isDirty)
     <Teleport to="body">
       <div v-if="showDeleteConfirm" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);">
         <div class="rounded-2xl p-6 max-w-sm w-full mx-4 space-y-4 shadow-xl" style="background: var(--surface-raised); border: 1px solid var(--border-subtle);">
-          <h3 class="text-[15px] font-semibold" style="color: var(--text-primary);">Delete MCP Server?</h3>
-          <p class="text-[13px]" style="color: var(--text-secondary);">This will permanently delete the configuration for <span class="font-mono font-bold">{{ name }}</span> and cannot be undone.</p>
+          <h3 class="text-[15px] font-semibold" style="color: var(--text-primary);">{{ t('mcpDetail.deleteConfirm') }}</h3>
+          <p class="text-[13px]" style="color: var(--text-secondary);">{{ t('mcpDetail.deleteConfirmText') }} <span class="font-mono font-bold">{{ name }}</span> {{ t('common.deleteConfirm') }}</p>
           <div class="flex gap-2 justify-end pt-2">
-            <button class="px-3 py-1.5 rounded-lg text-[12px] font-medium hover-bg" style="color: var(--text-tertiary);" @click="showDeleteConfirm = false">Cancel</button>
-            <button class="px-3 py-1.5 rounded-lg text-[12px] font-medium" style="background: var(--error); color: white;" @click="handleDelete">Delete Forever</button>
+            <button class="px-3 py-1.5 rounded-lg text-[12px] font-medium hover-bg" style="color: var(--text-tertiary);" @click="showDeleteConfirm = false">{{ t('common.cancel') }}</button>
+            <button class="px-3 py-1.5 rounded-lg text-[12px] font-medium" style="background: var(--error); color: white;" @click="handleDelete">{{ t('mcpDetail.deleteForever') }}</button>
           </div>
         </div>
       </div>
