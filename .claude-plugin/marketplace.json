@@ -1,0 +1,15 @@
+{
+  "name": "cogmint-marketplace",
+  "description": "Official COGMINT plugin entry for Claude Code",
+  "owner": {
+    "name": "RealThanhNguyxn"
+  },
+  "plugins": [
+    {
+      "name": "cogmint",
+      "description": "Install /cogmint launcher command and boot local COGMINT UI",
+      "version": "0.1.0",
+      "source": "./"
+    }
+  ]
+}

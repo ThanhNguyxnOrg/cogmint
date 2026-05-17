@@ -9,7 +9,7 @@ COGMINT is a dark-first control plane for Claude Code orchestration. We keep con
 ## Development Setup
 
 ```bash
-git clone https://github.com/ThanhNguyxn07/cogmint.git
+git clone https://github.com/ThanhNguyxnOrg/cogmint.git
 cd cogmint
 bun install
 bun run dev

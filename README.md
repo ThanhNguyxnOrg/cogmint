@@ -43,7 +43,7 @@ COGMINT turns Claude Code management from a config-file maze into a visual opera
 ## Quick Start
 
 ```bash
-git clone https://github.com/ThanhNguyxn07/cogmint.git
+git clone https://github.com/ThanhNguyxnOrg/cogmint.git
 cd cogmint
 bun install
 bun run dev
@@ -52,6 +52,44 @@ bun run dev
 Open `http://localhost:3000`.
 
 > Requirements: Bun (recommended) or Node.js 18+.
+
+### Optional: Install via Claude Plugin Marketplace
+
+You can also install COGMINT as a Claude Code plugin and run it with `/cogmint`.
+
+1. Add marketplace source:
+
+```text
+/plugin marketplace add ThanhNguyxnOrg/cogmint
+```
+
+2. Install plugin from marketplace:
+
+```text
+/plugin install cogmint@cogmint-marketplace
+```
+
+3. Start COGMINT:
+
+```text
+/cogmint
+```
+
+If launcher command is missing after install, run OS-specific installer once:
+
+```bash
+# Windows
+pwsh -NoProfile -ExecutionPolicy Bypass -File "$PWD/scripts/distribution/install-cogmint.ps1"
+
+# macOS / Linux
+bash "$PWD/scripts/distribution/install-cogmint.sh"
+```
+
+Then run again:
+
+```text
+/cogmint
+```
 
 ---
 

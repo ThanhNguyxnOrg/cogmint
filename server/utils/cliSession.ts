@@ -1,5 +1,6 @@
 import { spawn as ptySpawn, type IPty } from 'node-pty'
 import { randomUUID } from 'node:crypto'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
@@ -359,11 +360,17 @@ function getClaudePath(): string | null {
   }
 
   // Check common installation paths
-  const possiblePaths = [
-    '/opt/homebrew/bin/claude',  // Homebrew on Apple Silicon
-    '/usr/local/bin/claude',     // Homebrew on Intel
-    '/usr/bin/claude',           // System installation
-  ]
+  const possiblePaths = process.platform === 'win32'
+    ? [
+        'C:\\Program Files\\Claude\\claude.exe',
+        'C:\\Program Files\\Anthropic\\Claude\\claude.exe',
+        path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Claude', 'claude.exe'),
+      ]
+    : [
+        '/opt/homebrew/bin/claude',  // Homebrew on Apple Silicon
+        '/usr/local/bin/claude',     // Homebrew on Intel
+        '/usr/bin/claude',           // System installation
+      ]
 
   for (const claudePath of possiblePaths) {
     console.log('[CLI Session] Checking:', claudePath)
@@ -373,15 +380,34 @@ function getClaudePath(): string | null {
     }
   }
 
+  const commandProbe = process.platform === 'win32'
+    ? { command: 'where', args: ['claude'] }
+    : { command: 'which', args: ['claude'] }
+  const commandResult = spawnSync(commandProbe.command, commandProbe.args, { encoding: 'utf8' })
+  if (commandResult.status === 0 && commandResult.stdout) {
+    const candidate = commandResult.stdout.split(/\r?\n/).map(line => line.trim()).find(Boolean)
+    if (candidate && existsSync(candidate)) {
+      console.log('[CLI Session] Found Claude CLI via command probe:', candidate)
+      return candidate
+    }
+  }
+
   // Then try to find in PATH
   if (process.env.PATH) {
     console.log('[CLI Session] Searching in PATH...')
-    const pathDirs = process.env.PATH.split(':')
+    const delimiter = path.delimiter
+    const executableNames = process.platform === 'win32'
+      ? ['claude.exe', 'claude.cmd', 'claude.bat', 'claude']
+      : ['claude']
+
+    const pathDirs = process.env.PATH.split(delimiter)
     for (const dir of pathDirs) {
-      const claudePath = path.join(dir, 'claude')
-      if (existsSync(claudePath)) {
-        console.log('[CLI Session] Found Claude CLI at:', claudePath)
-        return claudePath
+      for (const executableName of executableNames) {
+        const claudePath = path.join(dir, executableName)
+        if (existsSync(claudePath)) {
+          console.log('[CLI Session] Found Claude CLI at:', claudePath)
+          return claudePath
+        }
       }
     }
   } else {
