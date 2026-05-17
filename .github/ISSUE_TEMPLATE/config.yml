@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/ThanhNguyxnOrg/cogmint/discussions
+    about: Ask questions, share ideas, and chat with the community.
+  - name: Security
+    url: https://github.com/ThanhNguyxnOrg/cogmint/security/advisories/new
+    about: Report a security vulnerability privately.

@@ -1,7 +1,40 @@
 {
   "name": "cogmint",
+  "version": "0.1.0",
+  "description": "Dark-first control plane for Claude Code orchestration. Visual ops surface for agents, skills, commands, workflows, and plugins.",
   "private": true,
   "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "RealThanhNguyxn",
+    "url": "https://github.com/RealThanhNguyxn"
+  },
+  "homepage": "https://github.com/ThanhNguyxnOrg/cogmint#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThanhNguyxnOrg/cogmint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ThanhNguyxnOrg/cogmint/issues"
+  },
+  "keywords": [
+    "cogmint",
+    "claude-code",
+    "anthropic",
+    "claude",
+    "agent-orchestration",
+    "ai-agents",
+    "nuxt",
+    "vue",
+    "typescript",
+    "dashboard",
+    "developer-tools",
+    "dark-theme"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.1.0"
+  },
   "bin": {
     "cogmint": "./bin/start.mjs"
   },
