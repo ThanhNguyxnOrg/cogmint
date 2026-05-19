@@ -63,7 +63,7 @@
     "nuxt": "^3.16",
     "shiki": "^4.0.2",
     "ws": "^8.20.1",
-    "yaml": "^2.6"
+    "yaml": "^2.9"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.108",
