@@ -68,6 +68,6 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.108",
     "@types/ws": "^8.18.1",
-    "typescript": "^5.7"
+    "typescript": "^6.0"
   }
 }
