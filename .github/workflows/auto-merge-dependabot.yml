@@ -1,7 +1,7 @@
 name: Auto-merge Dependabot
 
 on:
-  pull_request:
+  pull_request_target:
 
 permissions:
   contents: write
@@ -27,7 +27,7 @@ jobs:
         run: gh pr merge --squash --auto "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Flag major production updates for review
         if: >
@@ -35,7 +35,7 @@ jobs:
           steps.metadata.outputs.dependency-type != 'indirect' &&
           steps.metadata.outputs.package-ecosystem != 'github_actions' &&
           !contains(steps.metadata.outputs.dependency-group-name, 'dev-tooling')
-        run: gh pr edit --add-label "major-update,needs-review" "$PR_URL"
+        run: gh pr edit --add-label "major-update,needs-review" "$PR_URL" || echo "Labeling failed"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
