@@ -4,7 +4,7 @@ import type { ChatMessage } from '~/types'
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
 
-const { messages, isStreaming, error, activity, usedTools, sendMessage, stopStreaming, clearChat, activeAgent, pendingInput, clearAgent } = useChat()
+const { messages, isStreaming, error, activity, usedTools, sendMessage, stopStreaming, clearChat, activeAgent, pendingInput, clearAgent, sessionId } = useChat()
 const { displayPath: projectDisplayPath } = useWorkingDir()
 const { fetchAll: fetchAgents } = useAgents()
 const { fetchAll: fetchCommands } = useCommands()
@@ -15,6 +15,16 @@ const input = ref('')
 const inputRef = ref<{ focus: () => void; resetHeight: () => void } | null>(null)
 const messagesContainer = ref<HTMLElement | null>(null)
 const streamingDots = ref(0)
+
+function exportChatSession() {
+  if (!sessionId.value) return
+  const a = document.createElement('a')
+  a.href = `/api/sessions/${sessionId.value}/export?format=markdown`
+  a.download = `chat-session-${sessionId.value}.md`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
 
 let dotsInterval: ReturnType<typeof setInterval> | null = null
 watch(isStreaming, (val) => {
@@ -136,6 +146,9 @@ function handleQuickAction(prompt: string) {
             </div>
             <span class="text-[10px] font-mono" style="color: var(--text-disabled);">{{ activeAgent ? activeAgent.name : 'Agent Manager' }}</span>
           </div>
+          <button v-if="messages.length && sessionId" class="p-1.5 rounded-lg transition-all hover-bg" style="color: var(--text-disabled);" title="Export conversation as Markdown" @click="exportChatSession">
+            <UIcon name="i-lucide-download" class="size-3.5" />
+          </button>
           <button v-if="messages.length" class="p-1.5 rounded-lg transition-all hover-bg" style="color: var(--text-disabled);" title="New conversation" @click="() => { clearChat(); clearAgent() }">
             <UIcon name="i-lucide-rotate-ccw" class="size-3.5" />
           </button>

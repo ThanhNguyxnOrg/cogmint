@@ -263,6 +263,21 @@ const urlSessionId = ref<string | null>(null)
 const currentSessionSummary = ref<string>('')
 const currentProjectDisplayName = ref<string>('')
 
+function exportSession() {
+  const sid = viewMode.value === 'live' ? currentSessionId.value : urlSessionId.value
+  if (!sid) {
+    toast.add({ title: 'No active session to export', color: 'error' })
+    return
+  }
+  const a = document.createElement('a')
+  a.href = `/api/sessions/${sid}/export?format=markdown`
+  a.download = `session-${sid}.md`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  toast.add({ title: 'Session export started', color: 'success' })
+}
+
 // Permission mode selector
 const permissionModeOptions: { value: PermissionMode; label: string; description: string }[] = [
   { value: 'default', label: 'Ask', description: 'Ask for permission on each action' },
@@ -1159,6 +1174,17 @@ function handleOpenFile(filePath: string) {
            <span v-if="viewMode === 'live' && currentSessionId && !isSmallScreen" class="text-[10px] font-mono" style="color: var(--text-tertiary);">
              {{ currentSessionId.slice(0, 8) }}
            </span>
+
+            <!-- Export Session Button -->
+            <UButton
+              v-if="(viewMode === 'history' && urlSessionId) || (viewMode === 'live' && currentSessionId)"
+              icon="i-lucide-download"
+              size="xs"
+              variant="ghost"
+              color="neutral"
+              title="Export conversation as Markdown"
+              @click="exportSession"
+            />
 
         </div>
         </div>

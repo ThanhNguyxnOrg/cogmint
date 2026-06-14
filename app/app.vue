@@ -145,6 +145,7 @@ const navLinks = computed(() => [
 const navSecondary = computed(() => [
   { label: t('nav.explore'), icon: 'i-lucide-compass', to: '/explore' },
   { label: t('nav.graph'), icon: 'i-lucide-workflow', to: '/graph' },
+  { label: t('nav.analytics'), icon: 'i-lucide-bar-chart-3', to: '/analytics' },
   { label: t('nav.cli'), icon: 'i-lucide-terminal-square', to: '/cli' },
   { label: t('nav.settings'), icon: 'i-lucide-settings', to: '/settings' },
 ])

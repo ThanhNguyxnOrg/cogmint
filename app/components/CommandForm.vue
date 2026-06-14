@@ -14,10 +14,26 @@ const submitted = ref(false)
 const frontmatter = ref<CommandFrontmatter>({
   name: '',
   description: '',
+  'argument-hint': '',
 })
 const body = ref('')
 const directory = ref('')
 const allowedToolsStr = ref('')
+
+// Template Selector State
+const templateSelected = ref('empty')
+const templates = {
+  empty: '',
+  review: `# Objective\nReview the codebase for the specified argument. Focus on code structure, styling, and design consistency.\n\n# Guidelines\n- Run tests if relevant.\n- Suggest refactor options if needed.`,
+  exec: `# Objective\nRun the command with the specified arguments.\n\n# Execution\nRun the following script:\n\`\`\`bash\nnpm run build -- [argument]\n\`\`\``
+}
+
+watch(templateSelected, (newVal) => {
+  const val = templates[newVal as keyof typeof templates]
+  if (val !== undefined) {
+    body.value = val
+  }
+})
 
 const existingDirs = computed(() => {
   const dirs = new Set<string>()
@@ -55,6 +71,7 @@ async function save() {
     const command = await create({
       frontmatter: {
         ...frontmatter.value,
+        'argument-hint': frontmatter.value['argument-hint']?.trim() || undefined,
         'allowed-tools': tools.length > 0 ? tools : undefined,
       },
       body: body.value,
@@ -116,6 +133,24 @@ async function save() {
       <label class="field-label">Tool Permissions</label>
       <input v-model="allowedToolsStr" class="field-input" placeholder="Read, Write, Bash" />
       <span class="field-hint">What Claude can do when running this command. Leave blank to allow all. Options: Read (read files), Write (create/edit files), Bash (run terminal commands)</span>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="field-group">
+        <label class="field-label">Argument Hint</label>
+        <input v-model="frontmatter['argument-hint']" class="field-input" placeholder="&lt;project-path&gt;" />
+        <span class="field-hint">e.g. &lt;project-path&gt; or [branch]</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Instruction Template</label>
+        <select v-model="templateSelected" class="field-input" style="background: var(--surface-base); border: 1px solid var(--border); color: var(--text-primary);">
+          <option value="empty">Empty / Custom Instructions</option>
+          <option value="review">Codebase Review & Audit</option>
+          <option value="exec">Script Execution</option>
+        </select>
+        <span class="field-hint">Prefills objective and execution layout</span>
+      </div>
     </div>
 
     <div class="field-group">
