@@ -101,7 +101,7 @@ function toggleTool(tool: AgentTool) {
 
 
 <template>
-  <div class="p-6 space-y-5 bg-overlay w-[480px] max-w-full">
+  <div class="p-6 space-y-5 bg-overlay">
     <!-- Header with step indicator -->
     <div class="space-y-3">
       <div class="flex items-center justify-between">
@@ -137,8 +137,8 @@ function toggleTool(tool: AgentTool) {
       </div>
 
       <div class="field-group">
-        <label class="field-label" data-required>
-          What does it do?
+        <label class="field-label flex items-center gap-1">
+          <span data-required>What does it do?</span>
           <HelpTip title="Good descriptions" body="A good description helps you remember what this agent does, and helps Claude know when to use it." />
         </label>
         <textarea

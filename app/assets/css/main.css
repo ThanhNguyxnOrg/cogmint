@@ -432,15 +432,12 @@ body {
   color: var(--text-tertiary);
 }
 
-.field-label[data-required]::after {
-  content: "";
-  display: inline-block;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--accent);
-  margin-left: 6px;
-  vertical-align: middle;
+[data-required]::after {
+  content: " *";
+  color: var(--error);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  margin-left: 2px;
 }
 
 /* Shared base input styles */
