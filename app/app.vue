@@ -187,34 +187,55 @@ const sidebarWidth = computed(() => {
           style="background: radial-gradient(ellipse, rgba(47, 111, 255, 0.14) 0%, transparent 70%);"
         />
 
-        <div class="h-[56px] flex items-center gap-2.5 relative" :class="sidebarCollapsed ? 'justify-center px-2' : 'px-4'">
-          <template v-if="!sidebarCollapsed">
+        <div class="h-[56px] flex items-center relative" :class="sidebarCollapsed ? 'justify-center px-2' : 'gap-2.5 px-4'">
+          <div
+            class="flex items-center gap-2.5 min-w-0"
+            :class="sidebarCollapsed ? 'justify-center cursor-pointer size-7 rounded-lg hover-bg transition-colors duration-150' : 'flex-grow'"
+            :title="sidebarCollapsed ? 'Expand sidebar' : undefined"
+            @click="sidebarCollapsed ? (sidebarCollapsed = false) : null"
+          >
             <div
               class="size-7 rounded-lg flex items-center justify-center relative shrink-0"
-              style="background: linear-gradient(135deg, rgba(47, 111, 255, 0.2) 0%, rgba(122, 77, 255, 0.08) 100%); border: 1px solid rgba(47, 111, 255, 0.24);"
+              style="background: linear-gradient(135deg, rgba(47, 111, 255, 0.08) 0%, rgba(5, 220, 163, 0.04) 100%); border: 1px solid rgba(47, 111, 255, 0.15);"
             >
-              <UIcon name="i-lucide-bot" class="size-3.5" style="color: var(--accent);" />
+              <!-- Inline Custom SVG Logo representing Cog + Mint Leaf + Cognitive Node -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" class="size-4">
+                <defs>
+                  <linearGradient id="logoCogGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="var(--accent)" />
+                    <stop offset="100%" stop-color="var(--accent-secondary)" />
+                  </linearGradient>
+                  <linearGradient id="logoLeafGrad" x1="16" y1="8" x2="28" y2="20" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#05DCA3" />
+                    <stop offset="100%" stop-color="#34D399" />
+                  </linearGradient>
+                </defs>
+                <path d="M 16,4 A 12,12 0 0,0 16,28 L 16,24 A 8,8 0 0,1 16,8 Z" fill="url(#logoCogGrad)" />
+                <rect x="7.5" y="4.5" width="3.5" height="3.5" transform="rotate(-30 7.5 4.5)" fill="url(#logoCogGrad)" rx="0.75" />
+                <rect x="2" y="14" width="4.5" height="4" fill="url(#logoCogGrad)" rx="0.75" />
+                <rect x="5.8" y="24.2" width="3.5" height="3.5" transform="rotate(30 5.8 24.2)" fill="url(#logoCogGrad)" rx="0.75" />
+                <path d="M 16,4 C 24.5,4 28,11.5 28,16 C 28,23.5 21,28 16,28 C 16,28 19.5,20 18.5,16 C 17.5,12 16,4 16,4 Z" fill="url(#logoLeafGrad)" />
+                <circle cx="16" cy="16" r="2.5" fill="#ffffff" opacity="0.95" />
+              </svg>
             </div>
-            <div class="flex-1 flex flex-col min-w-0">
-              <span class="text-[12px] font-semibold tracking-tight" style="color: var(--text-primary); font-family: var(--font-display);">
-                {{ t('shell.brand.name') }}
+            <div v-if="!sidebarCollapsed" class="flex-grow flex flex-col min-w-0">
+              <span class="text-[13px] font-bold tracking-tight" style="color: var(--text-primary); font-family: var(--font-sans); line-height: 1.25;">
+                COGMINT
               </span>
-              <span class="text-[9px] font-mono tracking-wider uppercase" style="color: var(--text-disabled);">
-                {{ t('shell.brand.tagline') }}
+              <span class="text-[8px] font-mono tracking-widest uppercase" style="color: var(--text-disabled); font-size: 8px; line-height: 1;">
+                Orchestration OS
               </span>
             </div>
-          </template>
+          </div>
           <button
-            class="size-7 items-center justify-center rounded-lg transition-all duration-150 focus-ring press-scale shrink-0"
+            v-if="!sidebarCollapsed"
+            class="size-7 flex items-center justify-center rounded-lg transition-all duration-150 focus-ring press-scale shrink-0 hover-bg"
             :class="isMobileLayout ? 'hidden' : 'hidden md:flex'"
             style="color: var(--text-tertiary);"
-            :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-            @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'"
-            @mouseleave="($event.currentTarget as HTMLElement).style.background = 'transparent'"
-             @click="isMobileLayout ? (mobileSidebarOpen = false) : (sidebarCollapsed = !sidebarCollapsed)"
-
+            title="Collapse sidebar"
+            @click="isMobileLayout ? (mobileSidebarOpen = false) : (sidebarCollapsed = true)"
           >
-            <UIcon :name="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'" class="size-4" />
+            <UIcon name="i-lucide-panel-left-close" class="size-4" />
           </button>
         </div>
 
@@ -231,15 +252,10 @@ const sidebarWidth = computed(() => {
             :style="{
               color: isActive(link.to) ? 'var(--text-primary)' : 'var(--text-tertiary)',
               fontWeight: isActive(link.to) ? '500' : '400',
-              background: isActive(link.to) ? 'var(--accent-muted)' : undefined,
+              background: isActive(link.to) ? 'var(--surface-hover)' : undefined,
             }"
             :title="sidebarCollapsed ? link.label : undefined"
           >
-            <div
-              v-if="isActive(link.to)"
-              class="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 rounded-r-full"
-              style="background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);"
-            />
             <UIcon :name="link.icon" class="size-[15px] shrink-0 transition-colors duration-150" :style="{ color: isActive(link.to) ? 'var(--accent)' : undefined }" />
             <template v-if="!sidebarCollapsed">
               <span class="flex-1" style="font-family: var(--font-sans);">{{ link.label }}</span>
@@ -264,15 +280,10 @@ const sidebarWidth = computed(() => {
             :style="{
               color: isActive(link.to) ? 'var(--text-primary)' : 'var(--text-tertiary)',
               fontWeight: isActive(link.to) ? '500' : '400',
-              background: isActive(link.to) ? 'var(--accent-muted)' : undefined,
+              background: isActive(link.to) ? 'var(--surface-hover)' : undefined,
             }"
             :title="sidebarCollapsed ? link.label : undefined"
           >
-            <div
-              v-if="isActive(link.to)"
-              class="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 rounded-r-full"
-              style="background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);"
-            />
             <UIcon :name="link.icon" class="size-[15px] shrink-0 transition-colors duration-150" :style="{ color: isActive(link.to) ? 'var(--accent)' : undefined }" />
             <span v-if="!sidebarCollapsed" style="font-family: var(--font-sans);">{{ link.label }}</span>
           </NuxtLink>
@@ -280,13 +291,9 @@ const sidebarWidth = computed(() => {
 
         <div :class="sidebarCollapsed ? 'px-1.5 pb-2.5' : 'px-2.5 pb-2.5'">
           <button
-            class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring cursor-pointer press-scale"
+            class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring cursor-pointer press-scale btn-search-trigger"
             :class="sidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2'"
-            style="color: var(--text-disabled); background: var(--input-bg); border: 1px solid var(--border-subtle);"
              :title="sidebarCollapsed ? `${t('shell.search')} (⌘K)` : undefined"
-
-            @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; ($event.currentTarget as HTMLElement).style.color = 'var(--text-tertiary)'"
-            @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)'; ($event.currentTarget as HTMLElement).style.color = 'var(--text-disabled)'"
             @click="showSearch = true"
           >
             <UIcon name="i-lucide-search" class="size-3.5" />
@@ -300,7 +307,7 @@ const sidebarWidth = computed(() => {
 
         <div :class="sidebarCollapsed ? 'px-1.5 pb-1' : 'px-2.5 pb-1'">
           <button
-            class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring cursor-pointer press-scale"
+            class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring cursor-pointer press-scale hover-bg"
             :class="sidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2'"
             :style="{
               color: chatOpen ? 'var(--accent)' : 'var(--text-tertiary)',
@@ -329,7 +336,7 @@ const sidebarWidth = computed(() => {
         <div :class="sidebarCollapsed ? 'px-1.5 pb-1' : 'px-2.5 pb-1'">
           <ClientOnly>
             <button
-              class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring press-scale"
+              class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring press-scale hover-bg"
               :class="sidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2'"
               style="color: var(--text-tertiary);"
                :title="sidebarCollapsed ? (colorMode.value === 'dark' ? t('shell.lightMode') : t('shell.darkMode')) : undefined"
@@ -348,9 +355,9 @@ const sidebarWidth = computed(() => {
         <div :class="sidebarCollapsed ? 'px-1.5 pb-2.5' : 'px-2.5 pb-2.5'" style="border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
           <UPopover v-model:open="showWorkingDirPopover" :ui="{ content: 'w-[280px]' }">
             <button
-              class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring cursor-pointer press-scale"
+              class="w-full flex items-center rounded-lg transition-all duration-150 focus-ring cursor-pointer press-scale btn-folder-trigger"
               :class="sidebarCollapsed ? 'justify-center px-0 py-2' : 'gap-2 px-3 py-2 text-left'"
-              style="color: var(--text-disabled); border: 1px solid var(--border-subtle);"
+              style="border: 1px solid var(--border-subtle);"
                :title="sidebarCollapsed ? (workingDir || t('shell.setProjectDirectory')) : undefined"
 
               @click="openWorkingDirPopover"

@@ -32,9 +32,27 @@ function finish() {
         <div class="flex justify-center">
           <div
             class="size-16 rounded-2xl flex items-center justify-center"
-            style="background: linear-gradient(135deg, rgba(229, 169, 62, 0.15) 0%, rgba(229, 169, 62, 0.05) 100%); border: 1px solid rgba(229, 169, 62, 0.12);"
+            style="background: linear-gradient(135deg, rgba(47, 111, 255, 0.08) 0%, rgba(5, 220, 163, 0.04) 100%); border: 1px solid rgba(47, 111, 255, 0.15);"
           >
-            <UIcon name="i-lucide-bot" class="size-7" style="color: var(--accent);" />
+            <!-- Inline Custom SVG Logo representing Cog + Mint Leaf + Cognitive Node -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" class="size-8">
+              <defs>
+                <linearGradient id="wizardCogGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="var(--accent)" />
+                  <stop offset="100%" stop-color="var(--accent-secondary)" />
+                </linearGradient>
+                <linearGradient id="wizardLeafGrad" x1="16" y1="8" x2="28" y2="20" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#05DCA3" />
+                  <stop offset="100%" stop-color="#34D399" />
+                </linearGradient>
+              </defs>
+              <path d="M 16,4 A 12,12 0 0,0 16,28 L 16,24 A 8,8 0 0,1 16,8 Z" fill="url(#wizardCogGrad)" />
+              <rect x="7.5" y="4.5" width="3.5" height="3.5" transform="rotate(-30 7.5 4.5)" fill="url(#wizardCogGrad)" rx="0.75" />
+              <rect x="2" y="14" width="4.5" height="4" fill="url(#wizardCogGrad)" rx="0.75" />
+              <rect x="5.8" y="24.2" width="3.5" height="3.5" transform="rotate(30 5.8 24.2)" fill="url(#wizardCogGrad)" rx="0.75" />
+              <path d="M 16,4 C 24.5,4 28,11.5 28,16 C 28,23.5 21,28 16,28 C 16,28 19.5,20 18.5,16 C 17.5,12 16,4 16,4 Z" fill="url(#wizardLeafGrad)" />
+              <circle cx="16" cy="16" r="2.5" fill="#ffffff" opacity="0.95" />
+            </svg>
           </div>
         </div>
 

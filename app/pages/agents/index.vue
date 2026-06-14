@@ -122,19 +122,17 @@ async function useTemplate(templateId: string) {
           </div>
 
           <!-- Card grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <NuxtLink
               v-for="agent in groupAgents"
               :key="agent.slug"
               :to="`/agents/${agent.slug}`"
-              class="rounded-xl p-4 focus-ring hover-lift border border-subtle relative overflow-hidden group bg-card"
+              class="rounded-xl p-5 focus-ring hover-card-agent border border-subtle relative overflow-hidden group bg-card"
+              :style="{
+                '--agent-color': getAgentColor(agent.frontmatter.color),
+                '--agent-color-glow': getAgentColor(agent.frontmatter.color) + '12'
+              }"
             >
-              <!-- Color accent bar -->
-              <div
-                class="absolute inset-x-0 top-0 h-[4px] transition-opacity duration-200"
-                :style="{ background: getAgentColor(agent.frontmatter.color) }"
-              />
-
               <!-- Hover glow in agent color -->
               <div
                 class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
@@ -142,23 +140,32 @@ async function useTemplate(templateId: string) {
               />
 
               <!-- Header: icon + name + model -->
-              <div class="flex items-center gap-3 mb-2 relative">
-                <div
-                  class="size-8 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105"
-                  :style="{ background: getAgentColor(agent.frontmatter.color) + '18', border: '1px solid ' + getAgentColor(agent.frontmatter.color) + '25' }"
-                >
-                  <UIcon name="i-lucide-cpu" class="size-3.5" :style="{ color: getAgentColor(agent.frontmatter.color) }" />
+              <div class="flex items-center justify-between gap-3 mb-3.5 relative">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div
+                    class="size-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105"
+                    :style="{ background: getAgentColor(agent.frontmatter.color) + '12', border: '1px solid ' + getAgentColor(agent.frontmatter.color) + '20' }"
+                  >
+                    <UIcon name="i-lucide-cpu" class="size-3.5" :style="{ color: getAgentColor(agent.frontmatter.color) }" />
+                  </div>
+                  <span class="text-[13px] font-semibold text-primary truncate group-hover:text-[var(--accent)] transition-colors duration-150">
+                    {{ agent.frontmatter.name }}
+                  </span>
                 </div>
-                <span class="text-[13px] font-medium truncate flex-1">
-                  {{ agent.frontmatter.name }}
-                </span>
-                <span
-                  v-if="agent.frontmatter.model"
-                  class="text-[10px] font-mono font-medium px-1.5 py-px rounded-full shrink-0"
-                  :class="[getModelBadgeClasses(agent.frontmatter.model).bg, getModelBadgeClasses(agent.frontmatter.model).text]"
-                >
-                  {{ agent.frontmatter.model }}
-                </span>
+                
+                <div class="flex items-center gap-2 shrink-0">
+                  <span
+                    v-if="agent.frontmatter.model"
+                    class="text-[9px] font-mono font-medium px-2 py-0.5 rounded-full"
+                    :class="[getModelBadgeClasses(agent.frontmatter.model).bg, getModelBadgeClasses(agent.frontmatter.model).text]"
+                  >
+                    {{ agent.frontmatter.model }}
+                  </span>
+                  <div
+                    class="size-1.5 rounded-full shrink-0"
+                    :style="{ background: getAgentColor(agent.frontmatter.color) }"
+                  />
+                </div>
               </div>
 
               <!-- Description -->
@@ -167,9 +174,9 @@ async function useTemplate(templateId: string) {
               </p>
 
               <!-- Skill count badge -->
-              <div v-if="skillCounts[agent.slug]" class="mt-3 pt-3 relative" style="border-top: 1px solid var(--border-subtle);">
-                <span class="text-[10px] text-meta flex items-center gap-1.5">
-                  <UIcon name="i-lucide-sparkles" class="size-3" style="color: var(--accent);" />
+              <div v-if="skillCounts[agent.slug]" class="mt-3.5 pt-3.5 relative" style="border-top: 1px solid var(--border-subtle);">
+                <span class="text-[10px] text-meta flex items-center gap-1.5 font-mono">
+                  <UIcon name="i-lucide-sparkles" class="size-3 text-amber-400" />
                   {{ skillCounts[agent.slug] }} {{ skillCounts[agent.slug] === 1 ? t('agents.skill') : t('agents.skills') }}
                 </span>
               </div>

@@ -1,5 +1,9 @@
 <div align="center">
 
+<p align="center">
+  <img src="public/favicon.svg" alt="COGMINT Logo" width="80" height="80" />
+</p>
+
 # COGMINT
 
 <p>

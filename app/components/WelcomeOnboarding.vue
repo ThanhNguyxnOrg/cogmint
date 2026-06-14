@@ -32,79 +32,114 @@ async function useTemplate(templateId: string) {
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- Hero -->
-    <div class="text-center space-y-3 pt-2">
-      <h2 class="text-[24px] font-semibold tracking-tight" style="font-family: var(--font-display);">Welcome to Agent Manager</h2>
-      <p class="text-[13px] text-label max-w-lg mx-auto leading-relaxed">
-        This tool helps you configure how Claude Code behaves. Create <strong class="text-body">agents</strong> with custom instructions, build reusable <strong class="text-body">commands</strong>, and organize <strong class="text-body">skills</strong> — all without touching the terminal.
+  <div class="space-y-8 max-w-4xl mx-auto py-4">
+    <!-- Hero (Clean, minimalist layout) -->
+    <div class="text-center space-y-3 pt-4">
+      <h2 class="text-[26px] font-bold tracking-tight text-primary" style="font-family: var(--font-display); letter-spacing: -0.03em;">
+        Welcome to Agent Manager
+      </h2>
+      <p class="text-[13px] text-secondary max-w-lg mx-auto leading-relaxed">
+        This workspace helps you configure how Claude Code behaves. Create specialized <strong class="text-primary font-medium">agents</strong> with custom instructions, build reusable <strong class="text-primary font-medium">commands</strong>, and organize <strong class="text-primary font-medium">skills</strong> — all locally.
       </p>
     </div>
 
-    <!-- Concepts -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div class="rounded-lg p-4 bg-card">
-        <div class="flex items-center gap-2 mb-2">
-          <UIcon name="i-lucide-cpu" class="size-4" style="color: var(--accent);" />
-          <span class="text-[13px] font-medium">Agents</span>
+    <!-- Redesigned Concept blocks: Integrated Grid Panel -->
+    <div class="rounded-xl border border-subtle bg-card overflow-hidden">
+      <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-subtle">
+        <div class="p-5 space-y-2">
+          <div class="flex items-center gap-2">
+            <div class="size-6 rounded-md flex items-center justify-center bg-accent-muted border border-accent-glow">
+              <UIcon name="i-lucide-cpu" class="size-3.5" style="color: var(--accent);" />
+            </div>
+            <span class="text-[13px] font-semibold text-primary">Agents</span>
+          </div>
+          <p class="text-[12px] text-label leading-relaxed">
+            Specialized assistants. Each agent runs custom instructions, configuration files, and model tiers. Think of them as dedicated team roles.
+          </p>
         </div>
-        <p class="text-[12px] text-label leading-relaxed">
-          Specialized AI assistants. Each agent has its own personality, instructions, and model. Think of them as different team members.
-        </p>
-      </div>
-      <div class="rounded-lg p-4 bg-card">
-        <div class="flex items-center gap-2 mb-2">
-          <UIcon name="i-lucide-terminal" class="size-4" style="color: var(--accent);" />
-          <span class="text-[13px] font-medium">Commands</span>
+
+        <div class="p-5 space-y-2">
+          <div class="flex items-center gap-2">
+            <div class="size-6 rounded-md flex items-center justify-center bg-accent-muted border border-accent-glow">
+              <UIcon name="i-lucide-terminal" class="size-3.5" style="color: var(--accent);" />
+            </div>
+            <span class="text-[13px] font-semibold text-primary">Commands</span>
+          </div>
+          <p class="text-[12px] text-label leading-relaxed">
+            Reusable workflows triggered with a slash key (e.g. /deploy). Keyboard shortcuts for repetitive dev operations.
+          </p>
         </div>
-        <p class="text-[12px] text-label leading-relaxed">
-          Reusable workflows triggered with a slash (e.g., /deploy). Like shortcuts for things you do repeatedly.
-        </p>
-      </div>
-      <div class="rounded-lg p-4 bg-card">
-        <div class="flex items-center gap-2 mb-2">
-          <UIcon name="i-lucide-sparkles" class="size-4" style="color: var(--accent);" />
-          <span class="text-[13px] font-medium">Skills</span>
+
+        <div class="p-5 space-y-2">
+          <div class="flex items-center gap-2">
+            <div class="size-6 rounded-md flex items-center justify-center bg-accent-muted border border-accent-glow">
+              <UIcon name="i-lucide-sparkles" class="size-3.5" style="color: var(--accent);" />
+            </div>
+            <span class="text-[13px] font-semibold text-primary">Skills</span>
+          </div>
+          <p class="text-[12px] text-label leading-relaxed">
+            Local capabilities injected directly into agents. Teach them how to format files, query APIs, or write documentation.
+          </p>
         </div>
-        <p class="text-[12px] text-label leading-relaxed">
-          Specific capabilities you can add to agents. A skill teaches an agent how to do one thing well.
-        </p>
       </div>
     </div>
 
     <!-- Quick start templates -->
-    <div>
-      <h3 class="text-section-label mb-3">Quick start — pick a template</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between border-b border-subtle pb-2">
+        <span class="text-[13px] font-semibold tracking-tight text-primary">
+          Quick Start — Pick a Template
+        </span>
+        <span class="text-[11px] text-meta">3 configurations ready</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <button
           v-for="template in agentTemplates"
           :key="template.id"
-          class="rounded-lg p-4 text-left hover-card focus-ring relative overflow-hidden group bg-card"
+          class="rounded-xl p-5 text-left focus-ring relative overflow-hidden group bg-card hover-card border border-subtle"
           :disabled="creating !== null"
           @click="useTemplate(template.id)"
         >
-          <!-- Color accent bar -->
+          <!-- Hover glow using agent color seed -->
           <div
-            class="absolute inset-x-0 top-0 h-[2px] opacity-60 group-hover:opacity-100 transition-opacity"
-            :style="{ background: getAgentColor(template.frontmatter.color) }"
+            class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+            :style="{ background: 'radial-gradient(ellipse at top, ' + getAgentColor(template.frontmatter.color) + '08 0%, transparent 60%)' }"
           />
 
-          <div class="flex items-center gap-2.5 mb-2">
-            <UIcon :name="template.icon" class="size-4 shrink-0 text-label" />
-            <span class="text-[13px] font-medium">{{ template.frontmatter.name }}</span>
+          <div class="flex items-center justify-between mb-3 relative">
+            <div class="flex items-center gap-2.5">
+              <div
+                class="size-6 rounded-md flex items-center justify-center text-meta transition-colors"
+                :style="{ background: getAgentColor(template.frontmatter.color) + '12' }"
+              >
+                <UIcon :name="template.icon" class="size-3.5" :style="{ color: getAgentColor(template.frontmatter.color) }" />
+              </div>
+              <span class="text-[13px] font-semibold text-primary group-hover:text-[var(--accent)] transition-colors">
+                {{ template.frontmatter.name }}
+              </span>
+            </div>
+            
             <UIcon
               v-if="creating === template.id"
               name="i-lucide-loader-2"
-              class="size-3.5 ml-auto animate-spin text-meta"
+              class="size-3.5 animate-spin text-meta"
+            />
+            <div
+              v-else
+              class="size-1.5 rounded-full shrink-0"
+              :style="{ background: getAgentColor(template.frontmatter.color) }"
             />
           </div>
-          <p class="text-[12px] text-label leading-relaxed line-clamp-2">
+          
+          <p class="text-[12px] text-label leading-relaxed line-clamp-2 relative">
             {{ template.frontmatter.description }}
           </p>
         </button>
       </div>
-      <p class="text-[12px] text-meta mt-3">
-        Click any template to create it instantly. You can customize everything afterwards.
+      
+      <p class="text-[11px] text-meta text-center leading-relaxed">
+        Click any template to create it instantly. You can customize instructions and configurations afterward.
       </p>
     </div>
   </div>
