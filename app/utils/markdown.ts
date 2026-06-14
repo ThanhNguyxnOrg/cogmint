@@ -1,4 +1,5 @@
 import { marked } from 'marked'
+import DOMPurify from 'isomorphic-dompurify'
 import { protectMathBlocks, restoreMathBlocks } from './messageFormatting'
 
 // ── Shiki syntax highlighting ──────────────────────────────────────────────
@@ -71,7 +72,7 @@ export async function renderMarkdownAsync(text: string): Promise<string> {
   const { text: protectedText, blocks } = protectMathBlocks(text)
   let html = await marked.parse(protectedText, { async: false }) as string
   html = restoreMathBlocks(html, blocks)
-  return html
+  return DOMPurify.sanitize(html)
 }
 
 // ── Synchronous fallback renderer ──────────────────────────────────────────
@@ -87,7 +88,8 @@ marked.use({
  */
 export function renderMarkdown(text: string): string {
   if (!text) return ''
-  return marked.parse(text) as string
+  const html = marked.parse(text) as string
+  return DOMPurify.sanitize(html)
 }
 
 /**
@@ -98,7 +100,7 @@ export function renderMarkdownWithMath(text: string): string {
   const { text: protectedText, blocks } = protectMathBlocks(text)
   let html = marked.parse(protectedText) as string
   html = restoreMathBlocks(html, blocks)
-  return html
+  return DOMPurify.sanitize(html)
 }
 
 /**
@@ -133,7 +135,7 @@ export async function renderMarkdownWithHighlighting(text: string): Promise<stri
   )
 
   html = restoreMathBlocks(html, blocks)
-  return html
+  return DOMPurify.sanitize(html)
 }
 
 /**
@@ -141,7 +143,8 @@ export async function renderMarkdownWithHighlighting(text: string): Promise<stri
  */
 export function renderMarkdownInline(text: string): string {
   if (!text) return ''
-  return marked.parseInline(text) as string
+  const html = marked.parseInline(text) as string
+  return DOMPurify.sanitize(html)
 }
 
 /**

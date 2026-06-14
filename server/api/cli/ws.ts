@@ -22,11 +22,14 @@ import {
 } from '../../utils/contextMonitor'
 import type { CliWebSocketMessage, CliWebSocketEvent } from '~/types'
 
+import { authorizeWebSocket } from '../../utils/sessionToken'
+
 // Store context metrics per session
 const sessionMetrics = new Map<string, ContextMetrics>()
 
 export default defineWebSocketHandler({
   open(peer: Peer) {
+    if (!authorizeWebSocket(peer)) return
     console.log('[CLI WebSocket] Client connected', peer.id)
   },
 

@@ -1,12 +1,14 @@
 import type { Peer } from 'crossws'
 import { providerRegistry } from '../../../utils/providers/registry'
 import type { ChatV2WebSocketMessage, NormalizedMessage } from '~/types'
+import { authorizeWebSocket } from '../../../utils/sessionToken'
 
 // Store pending permissions for permission responses
 const pendingPermissions = new Map<string, { sessionId: string; peer: Peer }>()
 
 export default defineWebSocketHandler({
   open(peer: Peer) {
+    if (!authorizeWebSocket(peer)) return
     console.log('[Chat v2 WS] Client connected', peer.id)
 
     peer.send(JSON.stringify({

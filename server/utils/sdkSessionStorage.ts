@@ -6,6 +6,9 @@ import os from 'node:os'
 import { getClaudeDir } from './claudeDir'
 import type { NormalizedMessage } from '~/types'
 
+// In-memory cache for resolving sessionId -> projectName mapping
+const sessionProjectCache = new Map<string, string>()
+
 /**
  * Get SDK session messages from Claude Code projects
  * SDK sessions are stored in ~/.claude/projects/{projectName}/*.jsonl
@@ -81,6 +84,10 @@ export async function loadSdkSessionMessages(
     const paginatedMessages = sortedMessages.slice(startIndex, endIndex)
     const hasMore = startIndex > 0
 
+    if (total > 0) {
+      sessionProjectCache.set(sessionId, projectName)
+    }
+
     return {
       messages: paginatedMessages,
       total,
@@ -98,6 +105,10 @@ export async function loadSdkSessionMessages(
  * Returns the project name if found, null otherwise.
  */
 export async function detectSdkSession(sessionId: string): Promise<string | null> {
+  if (sessionProjectCache.has(sessionId)) {
+    return sessionProjectCache.get(sessionId)!
+  }
+
   const projectsDir = path.join(getClaudeDir(), 'projects')
 
   if (!existsSync(projectsDir)) {
@@ -150,6 +161,7 @@ export async function detectSdkSession(sessionId: string): Promise<string | null
         fileStream.destroy()
 
         if (found) {
+          sessionProjectCache.set(sessionId, projectName)
           return projectName
         }
       }

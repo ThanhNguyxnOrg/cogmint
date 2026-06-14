@@ -1,4 +1,5 @@
-import { getRequestHeader } from 'h3'
+import { getRequestHeader, setCookie } from 'h3'
+import { getApiToken } from '../utils/sessionToken'
 
 export default defineEventHandler((event) => {
   const host = getRequestHeader(event, 'host') || ''
@@ -44,4 +45,11 @@ export default defineEventHandler((event) => {
       })
     }
   }
+
+  // 4. Set Session Cookie for Local Authentications
+  setCookie(event, 'cogmint_token', getApiToken(), {
+    httpOnly: false, // Client-accessible to verify connection
+    sameSite: 'strict',
+    path: '/'
+  })
 })

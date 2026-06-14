@@ -2,9 +2,11 @@ import type { Peer } from 'crossws'
 import { queryClaudeChat, interruptQuery, loadAgentInstructions } from '../../utils/claudeSdk'
 import { saveMessageToSession } from '../../utils/chatSessionStorage'
 import type { ChatWebSocketMessage, NormalizedMessage } from '~/types'
+import { authorizeWebSocket } from '../../utils/sessionToken'
 
 export default defineWebSocketHandler({
   open(peer: Peer) {
+    if (!authorizeWebSocket(peer)) return
     console.log('[Chat WS] Client connected', peer.id)
 
     // Send connected event (no sessionId - that comes when user creates/selects a session)
