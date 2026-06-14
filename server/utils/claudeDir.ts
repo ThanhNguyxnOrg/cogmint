@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 let currentClaudeDir: string | null = null
 
@@ -14,11 +14,20 @@ export function getClaudeDir(): string {
 
 export function setClaudeDir(dir: string): void {
   if (!existsSync(dir)) {
-    throw createError({ statusCode: 400, message: `Directory does not exist: ${dir}` })
+    const err = new Error(`Directory does not exist: ${dir}`)
+    ;(err as any).statusCode = 400
+    throw err
   }
   currentClaudeDir = dir
 }
 
 export function resolveClaudePath(...segments: string[]): string {
-  return join(getClaudeDir(), ...segments)
+  const base = resolve(getClaudeDir())
+  const resolved = resolve(base, ...segments)
+  if (!resolved.startsWith(base)) {
+    const err = new Error('Security check failed: Path traversal detected')
+    ;(err as any).statusCode = 400
+    throw err
+  }
+  return resolved
 }

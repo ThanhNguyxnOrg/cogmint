@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { join, isAbsolute } from 'node:path'
+import { join, isAbsolute, resolve } from 'node:path'
 import { getClaudeDir } from '../utils/claudeDir'
 
 export default defineEventHandler(async (event) => {
@@ -12,23 +12,25 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Path is required' })
   }
 
-  const claudeDir = getClaudeDir()
-  let fullPath = path
+  const claudeDir = resolve(getClaudeDir())
+  const baseDir = projectDir && existsSync(projectDir) ? resolve(projectDir) : claudeDir
+  
+  // Resolve path to its absolute and normalized form
+  const resolvedPath = resolve(isAbsolute(path) ? path : join(baseDir, path))
 
-  if (!isAbsolute(path)) {
-    const baseDir = projectDir && existsSync(projectDir) ? projectDir : claudeDir
-    fullPath = join(baseDir, path)
+  // Security check: ensure the file is within baseDir OR claudeDir
+  const isInsideAllowedDir = resolvedPath.startsWith(baseDir) || resolvedPath.startsWith(claudeDir)
+  if (!isInsideAllowedDir) {
+    throw createError({ statusCode: 403, message: 'Access denied: Path is outside allowed directories' })
   }
 
-  // Security check: ensure the file is within an allowed directory
-  // In a production app, we'd want to be even more strict here
-  if (!existsSync(fullPath)) {
-    throw createError({ statusCode: 404, message: `File not found: ${fullPath}` })
+  if (!existsSync(resolvedPath)) {
+    throw createError({ statusCode: 404, message: `File not found: ${resolvedPath}` })
   }
 
   try {
-    const content = await readFile(fullPath, 'utf-8')
-    return { content, path: fullPath }
+    const content = await readFile(resolvedPath, 'utf-8')
+    return { content, path: resolvedPath }
   } catch (err: any) {
     throw createError({ statusCode: 500, message: `Failed to read file: ${err.message}` })
   }

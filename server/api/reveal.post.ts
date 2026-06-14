@@ -1,9 +1,6 @@
-import { exec } from 'node:child_process'
-import { promisify } from 'node:util'
+import { spawn } from 'node:child_process'
 import { dirname } from 'node:path'
 import { existsSync } from 'node:fs'
-
-const execAsync = promisify(exec)
 
 export default defineEventHandler(async (event) => {
   const { path } = await readBody<{ path: string }>(event)
@@ -20,18 +17,34 @@ export default defineEventHandler(async (event) => {
   }
 
   const platform = process.platform
-  let command = ''
+  let cmd = ''
+  let args: string[] = []
 
   if (platform === 'darwin') {
-    command = `open "${targetPath}"`
+    cmd = 'open'
+    args = [targetPath]
   } else if (platform === 'win32') {
-    command = `explorer "${targetPath}"`
+    cmd = 'explorer'
+    args = [targetPath]
   } else {
-    command = `xdg-open "${targetPath}"`
+    cmd = 'xdg-open'
+    args = [targetPath]
   }
 
   try {
-    await execAsync(command)
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(cmd, args, { stdio: 'ignore' })
+      child.on('error', (err) => {
+        reject(err)
+      })
+      child.on('close', (code) => {
+        if (code === 0 || platform === 'win32') {
+          resolve()
+        } else {
+          reject(new Error(`Process exited with code ${code}`))
+        }
+      })
+    })
     return { success: true }
   } catch (err: any) {
     // Windows explorer.exe frequently returns a non-zero exit code (e.g., 1)
