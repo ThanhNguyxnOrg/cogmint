@@ -8,38 +8,7 @@
  * Source: https://www.anthropic.com/pricing
  */
 
-export const MODEL_IDS = ['claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4'] as const
-export type ModelId = (typeof MODEL_IDS)[number]
-
-/** Map from the short "tier" alias (used in agent frontmatter) to the full API model id */
-export const MODEL_ALIAS: Record<string, ModelId> = {
-  opus: 'claude-opus-4',
-  sonnet: 'claude-sonnet-4',
-  haiku: 'claude-haiku-4',
-}
-
-/**
- * Named constants for model alias keys (the short strings used in agent frontmatter).
- * Use these for any server-side string comparisons or defaults instead of raw literals:
- *
- *   // ✅ do this
- *   import { MODEL_ALIAS_KEY, DEFAULT_MODEL_ALIAS } from './models'
- *   if (model === MODEL_ALIAS_KEY.SONNET) { ... }
- *   models: Object.values(MODEL_ALIAS_KEY)
- *
- *   // ❌ never this
- *   if (model === 'sonnet') { ... }
- *   models: ['sonnet', 'opus', 'haiku']
- */
-export const MODEL_ALIAS_KEY = {
-  OPUS: 'opus' as const,
-  SONNET: 'sonnet' as const,
-  HAIKU: 'haiku' as const,
-}
-
-/** Default model alias used when none is specified */
-export const DEFAULT_MODEL_ALIAS = MODEL_ALIAS_KEY.SONNET
-
+export type ModelId = string
 
 export interface ModelPricing {
   /** USD per 1M input tokens */
@@ -51,48 +20,95 @@ export interface ModelPricing {
 }
 
 export interface ServerModelMeta {
-  id: ModelId
+  id: string
   /** Max context window in tokens */
   contextWindow: number
   pricing: ModelPricing
 }
 
-export const SERVER_MODEL_META: Record<ModelId, ServerModelMeta> = {
-  'claude-opus-4': {
-    id: 'claude-opus-4',
-    contextWindow: 200_000,
-    pricing: { input: 15.0, output: 75.0, cached: 1.5 },
-  },
-  'claude-sonnet-4': {
-    id: 'claude-sonnet-4',
-    contextWindow: 200_000,
-    pricing: { input: 3.0, output: 15.0, cached: 0.3 },
-  },
-  'claude-haiku-4': {
-    id: 'claude-haiku-4',
-    contextWindow: 200_000,
-    pricing: { input: 0.8, output: 4.0, cached: 0.08 },
-  },
-}
-
 /** Fallback pricing when model is unknown */
-export const DEFAULT_PRICING: ModelPricing = SERVER_MODEL_META['claude-sonnet-4'].pricing
+export const DEFAULT_PRICING: ModelPricing = { input: 3.0, output: 15.0, cached: 0.3 }
 
 /** Default context window when model is unknown */
 export const DEFAULT_CONTEXT_WINDOW = 200_000
 
+import { getCachedClaudeInfo } from './claudeInfo'
+
 /**
  * Resolve a model string (either a full id like "claude-sonnet-4" or an alias
- * like "sonnet") to the canonical ServerModelMeta. Returns undefined if unknown.
+ * like "sonnet") to the canonical ServerModelMeta.
  */
 export function resolveModelMeta(model: string | undefined): ServerModelMeta | undefined {
-  if (!model) return undefined
-  // Try full id first
-  if (SERVER_MODEL_META[model as ModelId]) return SERVER_MODEL_META[model as ModelId]
-  // Try alias
-  const aliased = MODEL_ALIAS[model]
-  if (aliased) return SERVER_MODEL_META[aliased]
-  return undefined
+  const info = getCachedClaudeInfo()
+  let modelToResolve = model
+
+  // If model is 'default' or undefined, try to resolve using the active model from settings
+  if (!modelToResolve || modelToResolve === 'default') {
+    modelToResolve = info?.appliedSettings?.applied?.model
+  }
+
+  if (modelToResolve) {
+    // 1. Try to resolve from probed models first
+    if (info?.supportedModels && info.supportedModels.length > 0) {
+      let matched = info.supportedModels.find(m => m.value === modelToResolve)
+      if (!matched) {
+        const lower = modelToResolve.toLowerCase()
+        matched = info.supportedModels.find(m => {
+          const valLower = m.value.toLowerCase()
+          const dispLower = m.displayName.toLowerCase()
+          return valLower.includes(lower) || lower.includes(valLower) ||
+                 dispLower.includes(lower) || lower.includes(dispLower)
+        })
+      }
+
+      if (matched) {
+        return {
+          id: matched.value,
+          contextWindow: matched.contextWindow,
+          pricing: matched.pricing
+        }
+      }
+    }
+  }
+
+  const lookupModel = modelToResolve || model || 'claude-3-5-sonnet'
+  const lower = lookupModel.toLowerCase()
+
+  // Dynamic fallback / parsing
+  let contextWindow = DEFAULT_CONTEXT_WINDOW
+  let input = DEFAULT_PRICING.input
+  let output = DEFAULT_PRICING.output
+
+  if (lower.includes('opus')) {
+    contextWindow = 1_000_000
+    input = 15.0
+    output = 75.0
+  } else if (lower.includes('haiku')) {
+    contextWindow = 200_000
+    input = 0.8
+    output = 4.0
+  } else if (lower.includes('sonnet')) {
+    contextWindow = 200_000
+    input = 3.0
+    output = 15.0
+  }
+
+  // Look for direct numeric hints in the string
+  if (lower.includes('1m')) {
+    contextWindow = 1_000_000
+  } else if (lower.includes('200k')) {
+    contextWindow = 200_000
+  }
+
+  return {
+    id: lookupModel,
+    contextWindow,
+    pricing: {
+      input,
+      output,
+      cached: Number((input * 0.1).toFixed(4))
+    }
+  }
 }
 
 /**
@@ -107,4 +123,16 @@ export function getModelPricing(model: string | undefined): ModelPricing {
  */
 export function getModelContextWindow(model: string | undefined): number {
   return resolveModelMeta(model)?.contextWindow ?? DEFAULT_CONTEXT_WINDOW
+}
+
+/**
+ * Lookup: display label for a model (falls back to the raw string)
+ */
+export function getModelLabel(model: string | undefined): string {
+  if (!model || model === 'default') return 'Default'
+  const lower = model.toLowerCase()
+  if (lower.includes('opus')) return 'Claude 3 Opus'
+  if (lower.includes('sonnet')) return 'Claude 3.5 Sonnet'
+  if (lower.includes('haiku')) return 'Claude 3.5 Haiku'
+  return model.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }

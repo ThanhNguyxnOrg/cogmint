@@ -46,6 +46,24 @@ function saveWorkingDir() {
   dirSuggestions.value = []
 }
 
+const browsing = ref(false)
+async function browseFolder() {
+  browsing.value = true
+  try {
+    const res = await $fetch<{ path: string | null }>('/api/dialog/select-directory', {
+      method: 'POST'
+    })
+    if (res.path) {
+      workingDirInput.value = res.path
+      dirSuggestions.value = []
+    }
+  } catch (err) {
+    console.error('Failed to open native folder picker:', err)
+  } finally {
+    browsing.value = false
+  }
+}
+
 async function fetchDirSuggestions(path: string) {
   if (!path) { dirSuggestions.value = []; return }
   try {
@@ -384,46 +402,57 @@ const sidebarWidth = computed(() => {
                 <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary);">
                   Set the project directory for all chat conversations. Claude will operate in this directory.
                 </p>
-                <div class="relative">
-                  <input
-                    v-model="workingDirInput"
-                    class="field-input text-[12px] font-mono"
-                    placeholder="/path/to/your/project"
-                    autocomplete="off"
-                    @input="onDirInput"
-                    @keydown="onDirKeydown"
-                  />
-                  <div
-                    v-if="dirSuggestions.length"
-                    class="mt-1 rounded-lg overflow-hidden max-h-[200px] overflow-y-auto"
-                    style="border: 1px solid var(--border-subtle); background: var(--surface-raised);"
-                  >
-                    <button
-                      v-for="(suggestion, idx) in dirSuggestions"
-                      :key="suggestion.path"
-                      type="button"
-                      class="w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors duration-75"
-                      :style="{
-                        background: idx === selectedSuggestionIdx ? 'var(--accent-muted)' : 'transparent',
-                        color: idx === selectedSuggestionIdx ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      }"
-                      @click="selectSuggestion(suggestion)"
-                      @mouseenter="selectedSuggestionIdx = idx"
+                <div class="flex gap-2">
+                  <div class="relative flex-1">
+                    <input
+                      v-model="workingDirInput"
+                      class="field-input text-[12px] font-mono w-full"
+                      placeholder="/path/to/your/project"
+                      autocomplete="off"
+                      @input="onDirInput"
+                      @keydown="onDirKeydown"
+                    />
+                    <div
+                      v-if="dirSuggestions.length"
+                      class="absolute left-0 right-0 z-10 mt-1 rounded-lg overflow-hidden max-h-[200px] overflow-y-auto shadow-lg"
+                      style="border: 1px solid var(--border-subtle); background: var(--surface-raised);"
                     >
-                      <UIcon
-                        :name="suggestion.hasChildren ? 'i-lucide-folder' : 'i-lucide-folder-dot'"
-                        class="size-3.5 shrink-0"
-                        :style="{ color: idx === selectedSuggestionIdx ? 'var(--accent)' : 'var(--text-disabled)' }"
-                      />
-                      <span class="text-[11px] font-mono truncate">{{ suggestion.name }}</span>
-                      <UIcon
-                        v-if="suggestion.hasChildren"
-                        name="i-lucide-chevron-right"
-                        class="size-3 shrink-0 ml-auto"
-                        style="color: var(--text-disabled);"
-                      />
-                    </button>
+                      <button
+                        v-for="(suggestion, idx) in dirSuggestions"
+                        :key="suggestion.path"
+                        type="button"
+                        class="w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors duration-75"
+                        :style="{
+                          background: idx === selectedSuggestionIdx ? 'var(--accent-muted)' : 'transparent',
+                          color: idx === selectedSuggestionIdx ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        }"
+                        @click="selectSuggestion(suggestion)"
+                        @mouseenter="selectedSuggestionIdx = idx"
+                      >
+                        <UIcon
+                          :name="suggestion.hasChildren ? 'i-lucide-folder' : 'i-lucide-folder-dot'"
+                          class="size-3.5 shrink-0"
+                          :style="{ color: idx === selectedSuggestionIdx ? 'var(--accent)' : 'var(--text-disabled)' }"
+                        />
+                        <span class="text-[11px] font-mono truncate">{{ suggestion.name }}</span>
+                        <UIcon
+                          v-if="suggestion.hasChildren"
+                          name="i-lucide-chevron-right"
+                          class="size-3 shrink-0 ml-auto"
+                          style="color: var(--text-disabled);"
+                        />
+                      </button>
+                    </div>
                   </div>
+                  <UButton
+                    icon="i-lucide-folder-open"
+                    variant="soft"
+                    size="sm"
+                    class="shrink-0"
+                    title="Browse Folder"
+                    :loading="browsing"
+                    @click="browseFolder"
+                  />
                 </div>
                 <div class="flex items-center justify-between">
                   <button

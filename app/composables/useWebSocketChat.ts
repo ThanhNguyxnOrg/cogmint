@@ -18,58 +18,72 @@ export function useWebSocketChat() {
   /**
    * Connect to WebSocket
    */
-  function connect() {
+  async function connect() {
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       console.log('[WS Chat] Already connected')
       return
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/api/chat-ws/ws`
+    try {
+      const { token } = await $fetch<{ token: string }>('/api/token')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.host}/api/chat-ws/ws?token=${token}`
 
-    console.log('[WS Chat] Connecting to:', wsUrl)
+      console.log('[WS Chat] Connecting to:', wsUrl)
 
-    ws.value = new WebSocket(wsUrl)
+      ws.value = new WebSocket(wsUrl)
 
-    ws.value.onopen = () => {
-      console.log('[WS Chat] Connected')
-      isConnected.value = true
-      error.value = null
-    }
-
-    ws.value.onmessage = (event) => {
-      try {
-        const data: ChatWebSocketEvent = JSON.parse(event.data)
-
-        // Handle connection event
-        if ('type' in data && data.type === 'connected') {
-          console.log('[WS Chat] WebSocket connected')
-          return
-        }
-
-        // Handle disconnection event
-        if ('type' in data && data.type === 'disconnected') {
-          isConnected.value = false
-          return
-        }
-
-        // Handle normalized messages (they have 'kind' property)
-        if ('kind' in data) {
-          handleMessage(data as NormalizedMessage)
-        }
-      } catch (e) {
-        console.error('[WS Chat] Error parsing message:', e)
+      ws.value.onopen = () => {
+        console.log('[WS Chat] Connected')
+        isConnected.value = true
+        error.value = null
       }
-    }
 
-    ws.value.onerror = (event) => {
-      console.error('[WS Chat] Error:', event)
-      error.value = 'WebSocket connection error'
-    }
+      ws.value.onmessage = (event) => {
+        try {
+          const data: ChatWebSocketEvent = JSON.parse(event.data)
 
-    ws.value.onclose = () => {
-      console.log('[WS Chat] Disconnected')
-      isConnected.value = false
+          // Handle connection event
+          if ('type' in data && data.type === 'connected') {
+            console.log('[WS Chat] WebSocket connected')
+            return
+          }
+
+          // Handle disconnection event
+          if ('type' in data && data.type === 'disconnected') {
+            isConnected.value = false
+            return
+          }
+
+          // Handle normalized messages (they have 'kind' property)
+          if ('kind' in data) {
+            handleMessage(data as NormalizedMessage)
+          }
+        } catch (e) {
+          console.error('[WS Chat] Error parsing message:', e)
+        }
+      }
+
+      ws.value.onerror = (event) => {
+        console.error('[WS Chat] Error:', event)
+        error.value = 'WebSocket connection error'
+      }
+
+      ws.value.onclose = () => {
+        console.log('[WS Chat] Disconnected')
+        isConnected.value = false
+
+        // Auto-reconnect after delay
+        if (!reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null
+            connect()
+          }, RECONNECT_DELAY)
+        }
+      }
+    } catch (err: any) {
+      console.error('[WS Chat] Connection setup failed:', err)
+      error.value = 'Failed to retrieve connection token'
 
       // Auto-reconnect after delay
       if (!reconnectTimer) {

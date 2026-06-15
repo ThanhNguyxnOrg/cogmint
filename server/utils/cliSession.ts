@@ -5,7 +5,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
 import type { FSWatcher } from 'chokidar'
-import { getClaudeDir } from './claudeDir'
+import { getClaudeDir, resolveClaudePath } from './claudeDir'
 
 export interface CliSessionMetadata {
   id: string
@@ -338,7 +338,26 @@ export async function listSessionHistories(): Promise<CliSessionMetadata[]> {
 function getClaudePath(): string | null {
   console.log('[CLI Session] Searching for Claude CLI...')
 
-  // First check CLAUDE_CLI_PATH environment variable
+  // First check settings.json
+  try {
+    const settingsPath = resolveClaudePath('settings.json')
+    if (existsSync(settingsPath)) {
+      const settingsRaw = require('node:fs').readFileSync(settingsPath, 'utf8')
+      const settings = JSON.parse(settingsRaw)
+      if (settings?.claudeCliPath) {
+        console.log('[CLI Session] Found Claude CLI via settings.json:', settings.claudeCliPath)
+        if (existsSync(settings.claudeCliPath)) {
+          return settings.claudeCliPath
+        } else {
+          console.warn('[CLI Session] settings.json claudeCliPath set but file not found:', settings.claudeCliPath)
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore error
+  }
+
+  // Then check CLAUDE_CLI_PATH environment variable
   const config = useRuntimeConfig()
   if (config.claudeCliPath) {
     console.log('[CLI Session] Checking CLAUDE_CLI_PATH:', config.claudeCliPath)

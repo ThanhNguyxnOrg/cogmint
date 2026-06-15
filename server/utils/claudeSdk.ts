@@ -198,3 +198,43 @@ export async function loadAgentInstructions(agentSlug: string): Promise<string |
     return null
   }
 }
+
+/**
+ * Retrieve detailed context usage for a session ID.
+ * If active, queries the running instance. Otherwise, spawns a lightweight resume.
+ */
+export async function getSessionContextUsage(sessionId: string): Promise<any> {
+  const active = activeQueries.get(sessionId)
+  if (active && typeof (active as any).getContextUsage === 'function') {
+    try {
+      return await (active as any).getContextUsage()
+    } catch (err) {
+      console.error(`[Claude SDK] Failed to get context usage for active session ${sessionId}:`, err)
+    }
+  }
+
+  // Fallback: spawn a quick noop query to resume and fetch context usage
+  let q: any = null
+  try {
+    q = query({
+      prompt: 'probe',
+      options: {
+        resume: sessionId,
+        maxTurns: 0,
+      },
+    })
+    const usage = await q.getContextUsage()
+    return usage
+  } catch (error) {
+    console.error(`[Claude SDK] Failed to get context usage for paused session ${sessionId}:`, error)
+    return null
+  } finally {
+    if (q) {
+      try {
+        q.close()
+      } catch (err) {
+        // ignore close errors
+      }
+    }
+  }
+}

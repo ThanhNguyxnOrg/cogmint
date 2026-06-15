@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { isWorkspaceTrusted } from '../../utils/workspaceTrust'
 
 export default defineEventHandler(async (event) => {
   const { workingDir } = getQuery(event)
@@ -32,6 +33,7 @@ export default defineEventHandler(async (event) => {
   if (workingDir && typeof workingDir === 'string') {
     const projectPath = join(workingDir, '.mcp.json')
     if (existsSync(projectPath)) {
+      const trusted = await isWorkspaceTrusted(workingDir)
       try {
         const raw = await readFile(projectPath, 'utf-8')
         const data = JSON.parse(raw)
@@ -40,7 +42,8 @@ export default defineEventHandler(async (event) => {
             servers.push({
               name,
               ...(config as object),
-              scope: 'project'
+              scope: 'project',
+              untrusted: !trusted
             })
           }
         }

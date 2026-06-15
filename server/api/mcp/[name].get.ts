@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { isWorkspaceTrusted } from '../../utils/workspaceTrust'
 
 export default defineEventHandler(async (event) => {
   const name = getRouterParam(event, 'name')
@@ -36,10 +37,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const config = data.mcpServers[name]
+    const trusted = scope === 'project' && typeof workingDir === 'string' ? await isWorkspaceTrusted(workingDir) : true
     return {
       name,
       ...config,
-      scope
+      scope,
+      untrusted: !trusted
     }
   } catch (err: any) {
     if (err.statusCode) throw err

@@ -65,6 +65,58 @@ function installWrapper(binDir, entry) {
   return installPosixWrapper(binDir, entry)
 }
 
+function addToWindowsPath(binDir) {
+  try {
+    const psCommand = `
+      $binDir = "${binDir.replace(/\\/g, '\\\\')}"
+      $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+      if ($currentPath.Split(';') -notcontains $binDir) {
+        [Environment]::SetEnvironmentVariable("PATH", $currentPath + ";" + $binDir, "User")
+        Write-Output "SUCCESS"
+      } else {
+        Write-Output "ALREADY_EXISTS"
+      }
+    `.trim().replace(/\s+/g, ' ')
+    
+    const result = spawnSync('powershell', ['-NoProfile', '-Command', psCommand], { encoding: 'utf8' })
+    const out = result.stdout ? result.stdout.trim() : ''
+    if (out === 'SUCCESS') {
+      console.log('🎉 Automatically added Cogmint bin directory to your User PATH variable!')
+    } else if (out === 'ALREADY_EXISTS') {
+      console.log('✓ Cogmint bin directory is already in your PATH.')
+    }
+  } catch (err) {
+    console.warn('Could not automatically update PATH:', err.message)
+    console.log(`Please add this path manually to your user PATH: ${binDir}`)
+  }
+}
+
+function installClaudeCodeCommand() {
+  try {
+    const claudeCommandsDir = join(homedir(), '.claude', 'commands')
+    if (!existsSync(claudeCommandsDir)) {
+      mkdirSync(claudeCommandsDir, { recursive: true })
+    }
+    const commandFile = join(claudeCommandsDir, 'cogmint.md')
+    const content = `---
+name: cogmint
+description: Start the Cogmint Visual Control Plane dashboard in your browser
+---
+Launching Cogmint Visual Control Plane...
+
+Run the following command to start Cogmint:
+\`\`\`bash
+cogmint --open
+\`\`\`
+`
+    writeFileSync(commandFile, content, 'utf8')
+    console.log(`✓ Installed Claude Code slash command at: ${commandFile}`)
+    console.log('👉 You can now run "/cogmint" inside Claude Code to launch the visual interface!')
+  } catch (err) {
+    console.warn('Failed to install Claude Code slash command:', err.message)
+  }
+}
+
 function printPathHint(binDir) {
   if (platform() === 'win32') {
     console.log(`Add to PATH if needed: ${binDir}`)
@@ -100,8 +152,16 @@ function main() {
   const wrapper = installWrapper(binDir, launcherEntry)
 
   console.log(`Installed wrapper: ${wrapper}`)
-  printPathHint(binDir)
-  console.log('Run: cogmint --bootstrap --open')
+  
+  if (platform() === 'win32') {
+    addToWindowsPath(binDir)
+  } else {
+    printPathHint(binDir)
+  }
+
+  installClaudeCodeCommand()
+
+  console.log('\nRun: cogmint --bootstrap --open')
 }
 
 main()

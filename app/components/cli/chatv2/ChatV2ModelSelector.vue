@@ -16,7 +16,8 @@ const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 const selectedOption = computed(() => {
-  return props.options.find((o) => o.value === props.modelValue)
+  const val = props.modelValue.toLowerCase()
+  return props.options.find((o) => o.value === props.modelValue || val.includes(o.value.toLowerCase()))
 })
 
 function selectOption(value: string) {

@@ -48,7 +48,7 @@ export default defineEventHandler((event) => {
 
   // 4. Set Session Cookie for Local Authentications
   setCookie(event, 'cogmint_token', getApiToken(), {
-    httpOnly: false, // Client-accessible to verify connection
+    httpOnly: true, // Synced with WebSockets auto-cookie handshake (XSS protected)
     sameSite: 'strict',
     path: '/'
   })

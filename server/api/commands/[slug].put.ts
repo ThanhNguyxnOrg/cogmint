@@ -1,6 +1,7 @@
 import { writeFile, rename } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { resolveClaudePath } from '../../utils/claudeDir'
+import { basename } from 'node:path'
 import { serializeFrontmatter } from '../../utils/frontmatter'
 import { slugToPath, pathToSlug } from '../../utils/slugUtils'
 import type { CommandPayload } from '~/types'
@@ -45,7 +46,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     slug: finalSlug,
-    filename: finalFilePath.split('/').pop(),
+    filename: basename(finalFilePath),
     directory,
     frontmatter: payload.frontmatter,
     body: payload.body,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Agent, AgentFrontmatter, AgentMemory, AgentTool } from '~/types'
-import { MODEL_OPTIONS, DEFAULT_MODEL } from '~/utils/models'
+import { useClaudeInfo } from '~/composables/useClaudeInfo'
 
 const emit = defineEmits<{
   saved: [agent: Agent]
@@ -18,7 +18,7 @@ const totalSteps = 4
 const frontmatter = ref<AgentFrontmatter>({
   name: '',
   description: '',
-  model: DEFAULT_MODEL,
+  model: 'sonnet',
   skills: [],
   tools: [],
 })
@@ -30,8 +30,34 @@ const skillsModel = computed({
   set: (val: string[]) => { frontmatter.value.skills = val },
 })
 
+const claudeInfo = useClaudeInfo()
+
 onMounted(() => {
   fetchAllSkills()
+  claudeInfo.loadInfo()
+})
+
+const modelOptions = computed(() => {
+  const options = []
+  if (claudeInfo.supportedModels.value.length === 0) {
+    options.push(
+      { value: 'opus', label: 'Opus', desc: 'Most capable. Best for complex reasoning and nuanced tasks.' },
+      { value: 'sonnet', label: 'Sonnet', desc: 'Best balance of speed and quality. Good for most tasks.' },
+      { value: 'haiku', label: 'Haiku', desc: 'Fastest and cheapest. Great for simple, repetitive tasks.' }
+    )
+  } else {
+    // filter out default since we already append a custom one at the end
+    options.push(...claudeInfo.supportedModels.value
+      .filter(m => m.value !== 'default')
+      .map(m => ({
+        value: m.value,
+        label: m.displayName || m.value,
+        desc: m.description || ''
+      }))
+    )
+  }
+  options.push({ value: undefined, label: 'Default', desc: 'Uses whatever model is set in your Claude Code config.' })
+  return options
 })
 
 // Validation
@@ -161,7 +187,7 @@ function toggleTool(tool: AgentTool) {
         </label>
         <div class="space-y-1.5">
           <button
-            v-for="opt in MODEL_OPTIONS"
+            v-for="opt in modelOptions"
             :key="opt.label"
             type="button"
             class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150"

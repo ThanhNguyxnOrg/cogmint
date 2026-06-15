@@ -41,43 +41,57 @@ export function useChatV2Handler() {
   /**
    * Connect to Chat v2 WebSocket
    */
-  function connect() {
+  async function connect() {
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       console.log('[ChatV2] Already connected')
       return
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/api/v2/chat/ws`
+    try {
+      const { token } = await $fetch<{ token: string }>('/api/token')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.host}/api/v2/chat/ws?token=${token}`
 
-    console.log('[ChatV2] Connecting to:', wsUrl)
+      console.log('[ChatV2] Connecting to:', wsUrl)
 
-    ws.value = new WebSocket(wsUrl)
+      ws.value = new WebSocket(wsUrl)
 
-    ws.value.onopen = () => {
-      console.log('[ChatV2] Connected')
-      isConnected.value = true
-      error.value = null
-    }
-
-    ws.value.onmessage = (event) => {
-      try {
-        const data: ChatV2WebSocketEvent = JSON.parse(event.data)
-        handleEvent(data)
-      } catch (e) {
-        console.error('[ChatV2] Error parsing message:', e)
+      ws.value.onopen = () => {
+        console.log('[ChatV2] Connected')
+        isConnected.value = true
+        error.value = null
       }
-    }
 
-    ws.value.onerror = (event) => {
-      console.error('[ChatV2] Error:', event)
-      error.value = 'WebSocket connection error'
-    }
+      ws.value.onmessage = (event) => {
+        try {
+          const data: ChatV2WebSocketEvent = JSON.parse(event.data)
+          handleEvent(data)
+        } catch (e) {
+          console.error('[ChatV2] Error parsing message:', e)
+        }
+      }
 
-    ws.value.onclose = () => {
-      console.log('[ChatV2] Disconnected')
-      isConnected.value = false
-      streamingBuffer.reset()
+      ws.value.onerror = (event) => {
+        console.error('[ChatV2] Error:', event)
+        error.value = 'WebSocket connection error'
+      }
+
+      ws.value.onclose = () => {
+        console.log('[ChatV2] Disconnected')
+        isConnected.value = false
+        streamingBuffer.reset()
+
+        // Auto-reconnect after delay
+        if (!reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null
+            connect()
+          }, RECONNECT_DELAY)
+        }
+      }
+    } catch (err: any) {
+      console.error('[ChatV2] Connection setup failed:', err)
+      error.value = 'Failed to retrieve connection token'
 
       // Auto-reconnect after delay
       if (!reconnectTimer) {

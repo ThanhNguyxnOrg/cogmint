@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { lstat, mkdir, readlink, readdir, readFile, symlink, unlink } from 'node:fs/promises'
-import { dirname, join, relative, resolve as pathResolve } from 'node:path'
+import { dirname, join, relative, resolve as pathResolve, basename } from 'node:path'
 import type { GithubImport, SkillFrontmatter } from '~/types'
 import { resolveClaudePath } from './claudeDir'
 import { parseFrontmatter } from './frontmatter'
@@ -142,12 +142,13 @@ export async function resolveGithubImportAgentFiles(entry: GithubImport): Promis
       const { frontmatter } = parseFrontmatter<any>(raw)
       
       // Detect Agent
-      if (frontmatter.name && frontmatter.description && (fullPath.includes('agents/') || frontmatter.model || frontmatter.skills)) {
-        const parts = fullPath.split('/')
-        const fileName = parts.pop()!
+      const normalizedPath = fullPath.replace(/\\/g, '/')
+      if (frontmatter.name && frontmatter.description && (normalizedPath.includes('agents/') || frontmatter.model || frontmatter.skills)) {
+        const fileName = basename(fullPath)
+        const parts = fullPath.split(/[\\/]/).filter(Boolean)
         let slug = fileName.replace(/\.md$/, '')
-        if (slug.toLowerCase() === 'agent' && parts.length > 0) {
-          slug = parts[parts.length - 1] ?? slug
+        if (slug.toLowerCase() === 'agent' && parts.length > 1) {
+          slug = parts[parts.length - 2] ?? slug
         }
         if (!slug) continue
         if (!out.has(slug)) out.set(slug, fullPath)

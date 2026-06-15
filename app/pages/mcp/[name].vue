@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
 const { fetchServer, addServer, removeServer } = useMCP()
 const { clearChat: clearStudioChat, toolCalls, isStreaming: studioStreaming } = useStudioChat()
+const { workingDir } = useWorkingDir()
 const toast = useToast()
 
 const name = route.params.name as string
@@ -33,8 +34,104 @@ const isDirty = computed(() => {
   return JSON.stringify(form.value) !== initialForm.value
 })
 
-onMounted(async () => {
+const isTrusted = ref(true)
+const hasProjectConfig = ref(false)
+const checkingTrust = ref(false)
+
+// GUI Tester State
+const activeTab = ref<'tester' | 'chat'>('tester')
+const tools = ref<any[]>([])
+const selectedToolName = ref('')
+const toolsLoading = ref(false)
+const toolsError = ref<string | null>(null)
+const toolArguments = ref<Record<string, any>>({})
+const executionResult = ref<any>(null)
+const executingTool = ref(false)
+const executionError = ref<string | null>(null)
+
+const selectedTool = computed(() => tools.value.find(t => t.name === selectedToolName.value))
+
+function selectTool(toolName: string) {
+  selectedToolName.value = toolName
+  toolArguments.value = {}
+  executionResult.value = null
+  executionError.value = null
+  
+  const schema = selectedTool.value?.inputSchema
+  if (schema && schema.properties) {
+    for (const [key, prop] of Object.entries<any>(schema.properties)) {
+      if (prop.default !== undefined) {
+        toolArguments.value[key] = prop.default
+      } else if (prop.type === 'boolean') {
+        toolArguments.value[key] = false
+      } else {
+        toolArguments.value[key] = ''
+      }
+    }
+  }
+}
+
+async function checkWorkspaceTrust() {
+  if (scope !== 'project' || !workingDir.value) {
+    isTrusted.value = true
+    hasProjectConfig.value = false
+    return
+  }
+  checkingTrust.value = true
   try {
+    const res = await $fetch<{ trusted: boolean; hasProjectConfig: boolean }>('/api/mcp/trust', {
+      query: { workingDir: workingDir.value }
+    })
+    isTrusted.value = res.trusted
+    hasProjectConfig.value = res.hasProjectConfig
+  } catch {
+    isTrusted.value = true
+    hasProjectConfig.value = false
+  } finally {
+    checkingTrust.value = false
+  }
+}
+
+async function trustWorkspace() {
+  if (!workingDir.value) return
+  try {
+    await $fetch('/api/mcp/trust', {
+      method: 'POST',
+      body: { workingDir: workingDir.value, trust: true }
+    })
+    isTrusted.value = true
+    toast.add({ title: 'Workspace trusted successfully', color: 'success' })
+    await loadServerDetails()
+  } catch (err: any) {
+    toast.add({ title: 'Failed to trust workspace', description: err.message, color: 'error' })
+  }
+}
+
+async function loadTools() {
+  if (scope === 'project' && !isTrusted.value) {
+    tools.value = []
+    return
+  }
+  toolsLoading.value = true
+  toolsError.value = null
+  try {
+    const res = await $fetch<{ tools: any[] }>('/api/mcp/tools', {
+      query: { name, scope, workingDir: workingDir.value }
+    })
+    tools.value = res.tools || []
+    if (tools.value.length > 0) {
+      selectTool(tools.value[0].name)
+    }
+  } catch (err: any) {
+    toolsError.value = err.message || 'Failed to load tools'
+  } finally {
+    toolsLoading.value = false
+  }
+}
+
+async function loadServerDetails() {
+  try {
+    await checkWorkspaceTrust()
     const data = await fetchServer(name, scope)
     form.value.name = data.name
     form.value.transport = data.transport
@@ -51,13 +148,78 @@ onMounted(async () => {
       form.value.headerPairs = Object.entries(data.headers).map(([key, value]) => ({ key, value }))
     }
     initialForm.value = JSON.stringify(form.value)
+
+    if (!form.value.disabled && form.value.transport === 'stdio') {
+      await loadTools()
+    }
   } catch (err) {
     router.push('/mcp')
   } finally {
     loading.value = false
   }
+}
+
+onMounted(async () => {
+  await loadServerDetails()
   clearStudioChat()
 })
+
+async function runSelectedTool() {
+  if (!selectedToolName.value) return
+  executingTool.value = true
+  executionResult.value = null
+  executionError.value = null
+  try {
+    const payloadArgs: Record<string, any> = {}
+    const schema = selectedTool.value?.inputSchema
+    
+    for (const [key, value] of Object.entries(toolArguments.value)) {
+      const propSchema = schema?.properties?.[key]
+      if (propSchema?.type === 'object' || propSchema?.type === 'array') {
+        if (typeof value === 'string' && value.trim()) {
+          try {
+            payloadArgs[key] = JSON.parse(value)
+          } catch (e) {
+            throw new Error(`Invalid JSON format for parameter "${key}"`)
+          }
+        }
+      } else if (propSchema?.type === 'number' || propSchema?.type === 'integer') {
+        if (value !== '') {
+          payloadArgs[key] = Number(value)
+        }
+      } else if (propSchema?.type === 'boolean') {
+        payloadArgs[key] = !!value
+      } else {
+        if (value !== '') {
+          payloadArgs[key] = value
+        }
+      }
+    }
+
+    const res = await $fetch<any>('/api/mcp/run', {
+      method: 'POST',
+      body: {
+        name,
+        scope,
+        tool: selectedToolName.value,
+        arguments: payloadArgs,
+        workingDir: workingDir.value
+      }
+    })
+    executionResult.value = res
+  } catch (err: any) {
+    executionError.value = err.message || 'Execution failed'
+  } finally {
+    executingTool.value = false
+  }
+}
+
+function copyToClipboard(text: string) {
+  if (import.meta.client && navigator.clipboard) {
+    navigator.clipboard.writeText(text)
+    toast.add({ title: 'Copied output to clipboard', color: 'success' })
+  }
+}
 
 function addEnvRow() { form.value.envPairs.push({ key: '', value: '' }) }
 function removeEnvRow(idx: number) { form.value.envPairs.splice(idx, 1) }
@@ -100,6 +262,8 @@ async function save() {
 
     if (payload.name !== name) {
       router.push({ path: `/mcp/${encodeURIComponent(payload.name)}`, query: { scope: payload.scope } })
+    } else {
+      await loadTools()
     }
   } catch (e: any) {
     // Error is already handled/toasted by useMCP
@@ -142,6 +306,9 @@ useUnsavedChanges(isDirty)
           {{ loading ? t('common.loading') : name }}
         </h1>
         <span v-if="isDirty" class="text-[9px] font-mono px-1.5 py-px rounded-full" style="background: rgba(229, 169, 62, 0.1); color: var(--accent);">{{ t('common.unsaved') }}</span>
+        <span v-if="!isTrusted && scope === 'project'" class="text-[9px] font-mono px-1.5 py-px rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+          Untrusted Workspace
+        </span>
       </div>
       <div class="flex items-center gap-2">
         <UButton
@@ -175,6 +342,21 @@ useUnsavedChanges(isDirty)
     <div v-else class="flex-1 flex min-h-0">
       <!-- Left: Configuration -->
       <div class="w-[60%] flex flex-col border-r overflow-y-auto custom-scrollbar" style="border-color: var(--border-subtle);">
+        <!-- Workspace Trust Details Alert -->
+        <div v-if="!isTrusted" class="mx-8 mt-6 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 flex items-start justify-between gap-4">
+          <div class="flex gap-3 min-w-0">
+            <UIcon name="i-lucide-shield-alert" class="size-5 text-yellow-500 shrink-0" />
+            <div>
+              <h4 class="text-[13px] font-semibold text-primary">Untrusted Workspace Config</h4>
+              <p class="text-[12px] text-secondary leading-relaxed mt-0.5">
+                This project-level server configuration cannot be listed or executed until you explicitly trust this directory.
+              </p>
+              <p class="text-[11px] text-meta font-mono mt-1 truncate">{{ workingDir }}</p>
+            </div>
+          </div>
+          <UButton label="Trust" size="xs" color="warning" icon="i-lucide-shield-check" @click="trustWorkspace" />
+        </div>
+
         <div class="px-8 py-6 space-y-8">
           <!-- Basic Info -->
           <section class="space-y-4">
@@ -304,12 +486,218 @@ useUnsavedChanges(isDirty)
         </div>
       </div>
 
-      <!-- Right: Test -->
-      <div class="w-[40%] flex flex-col">
-        <div class="flex-1 min-h-0">
-          <TestPanel :agent-slug="`mcp-${name}`" :agent-name="name" :is-draft="isDirty" />
+      <!-- Right: Tabbed Test and GUI Tester -->
+      <div class="w-[40%] flex flex-col border-l" style="border-color: var(--border-subtle);">
+        <!-- Tab Selector -->
+        <div class="shrink-0 flex border-b px-4 py-2 gap-2" style="border-color: var(--border-subtle); background: var(--surface-raised);">
+          <button
+            class="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+            :style="{
+              background: activeTab === 'tester' ? 'rgba(229, 169, 62, 0.1)' : 'transparent',
+              color: activeTab === 'tester' ? 'var(--accent)' : 'var(--text-tertiary)'
+            }"
+            @click="activeTab = 'tester'"
+          >
+            GUI Tool Tester
+          </button>
+          <button
+            class="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+            :style="{
+              background: activeTab === 'chat' ? 'rgba(229, 169, 62, 0.1)' : 'transparent',
+              color: activeTab === 'chat' ? 'var(--accent)' : 'var(--text-tertiary)'
+            }"
+            @click="activeTab = 'chat'"
+          >
+            Interactive Chat
+          </button>
         </div>
-        <ExecutionInspector :tool-calls="toolCalls" :is-streaming="studioStreaming" />
+
+        <!-- Tab 1: GUI Tool Tester -->
+        <div v-if="activeTab === 'tester'" class="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar p-6 space-y-6">
+          <!-- Untrusted Workspace Alert -->
+          <div v-if="!isTrusted" class="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 space-y-3">
+            <div class="flex gap-2">
+              <UIcon name="i-lucide-shield-alert" class="size-4 shrink-0 mt-0.5 text-yellow-500" />
+              <div>
+                <h4 class="text-[12px] font-semibold text-primary">Untrusted Workspace</h4>
+                <p class="text-[11px] text-secondary leading-relaxed mt-0.5">
+                  Direct tool execution and listing are disabled for safety until this project workspace directory is trusted.
+                </p>
+              </div>
+            </div>
+            <UButton label="Trust Workspace" size="xs" color="warning" block @click="trustWorkspace" />
+          </div>
+
+          <!-- Disabled Warning -->
+          <div v-else-if="form.disabled" class="p-4 rounded-xl border border-subtle bg-surface-raised flex gap-3 text-secondary">
+            <UIcon name="i-lucide-info" class="size-4 shrink-0 mt-0.5" />
+            <p class="text-[12px] leading-relaxed">
+              Enable the server to test its tools.
+            </p>
+          </div>
+
+          <!-- SSE Warning -->
+          <div v-else-if="form.transport !== 'stdio'" class="p-4 rounded-xl border border-subtle bg-surface-raised flex gap-3 text-secondary">
+            <UIcon name="i-lucide-info" class="size-4 shrink-0 mt-0.5" />
+            <p class="text-[12px] leading-relaxed">
+              Direct GUI testing is currently supported for Stdio transport servers.
+            </p>
+          </div>
+
+          <!-- Active Tools Selection -->
+          <div v-else class="space-y-4">
+            <div v-if="toolsLoading" class="flex items-center gap-2 text-secondary text-[12px] py-4">
+              <UIcon name="i-lucide-loader-2" class="size-4 animate-spin text-accent" />
+              <span>Querying available tools...</span>
+            </div>
+
+            <div v-else-if="toolsError" class="p-4 rounded-xl border border-error/20 bg-error/5 text-error text-[12px]">
+              {{ toolsError }}
+              <UButton label="Retry" size="xs" class="mt-2" variant="soft" color="error" @click="loadTools" />
+            </div>
+
+            <div v-else-if="tools.length === 0" class="py-8 text-center text-secondary text-[12px]">
+              No tools exposed by this MCP server.
+            </div>
+
+            <div v-else class="space-y-4">
+              <!-- Select Tool -->
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-medium" style="color: var(--text-tertiary);">Select Tool</label>
+                <select
+                  :value="selectedToolName"
+                  class="field-input w-full font-mono text-[12px]"
+                  @change="selectTool(($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="t in tools" :key="t.name" :value="t.name">{{ t.name }}</option>
+                </select>
+              </div>
+
+              <!-- Tool Description -->
+              <div v-if="selectedTool" class="p-3.5 rounded-xl border" style="border-color: var(--border-subtle); background: var(--surface-raised);">
+                <h4 class="text-[12px] font-semibold text-primary font-mono">{{ selectedTool.name }}</h4>
+                <p class="text-[11px] text-secondary leading-relaxed mt-1" v-if="selectedTool.description">
+                  {{ selectedTool.description }}
+                </p>
+              </div>
+
+              <!-- Tool Inputs Form -->
+              <div v-if="selectedTool" class="space-y-4 pt-2">
+                <h4 class="text-[11px] font-semibold tracking-wider uppercase opacity-50">Parameters</h4>
+                
+                <div v-if="!selectedTool.inputSchema?.properties || Object.keys(selectedTool.inputSchema.properties).length === 0" class="text-[12px] text-secondary italic">
+                  This tool accepts no arguments.
+                </div>
+
+                <div v-else class="space-y-3">
+                  <div
+                    v-for="[key, prop] in Object.entries<any>(selectedTool.inputSchema.properties)"
+                    :key="key"
+                    class="space-y-1.5"
+                  >
+                    <div class="flex items-center justify-between text-[11px]">
+                      <span class="font-semibold font-mono" style="color: var(--text-secondary);">
+                        {{ key }}
+                        <span v-if="selectedTool.inputSchema.required?.includes(key)" class="text-error font-sans ml-0.5">*</span>
+                      </span>
+                      <span class="text-[10px] opacity-65 font-mono" style="color: var(--text-disabled);">
+                        {{ prop.type }}
+                      </span>
+                    </div>
+
+                    <p v-if="prop.description" class="text-[10px] leading-relaxed italic" style="color: var(--text-disabled);">
+                      {{ prop.description }}
+                    </p>
+
+                    <!-- Form Inputs based on type -->
+                    <template v-if="prop.type === 'boolean'">
+                      <label class="field-toggle scale-90 origin-left">
+                        <input type="checkbox" v-model="toolArguments[key]" />
+                        <span class="field-toggle__track">
+                          <span class="field-toggle__thumb" />
+                        </span>
+                      </label>
+                    </template>
+
+                    <template v-else-if="prop.type === 'object' || prop.type === 'array'">
+                      <textarea
+                        v-model="toolArguments[key]"
+                        class="field-input w-full font-mono text-[11px] min-h-[60px]"
+                        placeholder='e.g. { "key": "value" }'
+                        rows="3"
+                      />
+                    </template>
+
+                    <template v-else-if="prop.type === 'number' || prop.type === 'integer'">
+                      <input
+                        type="number"
+                        v-model="toolArguments[key]"
+                        class="field-input w-full font-mono text-[12px]"
+                      />
+                    </template>
+
+                    <template v-else>
+                      <input
+                        type="text"
+                        v-model="toolArguments[key]"
+                        class="field-input w-full font-mono text-[12px]"
+                        placeholder="value..."
+                      />
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-2">
+                  <UButton
+                    label="Run Tool"
+                    icon="i-lucide-play"
+                    block
+                    color="primary"
+                    :loading="executingTool"
+                    @click="runSelectedTool"
+                  />
+                </div>
+
+                <!-- Output Display -->
+                <div v-if="executingTool || executionResult || executionError" class="space-y-2 pt-4 border-t" style="border-color: var(--border-subtle);">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold tracking-wider uppercase opacity-50">Response</span>
+                    <button
+                      v-if="executionResult"
+                      class="text-[10px] font-medium text-accent flex items-center gap-1 hover:underline bg-transparent border-0 cursor-pointer"
+                      @click="copyToClipboard(JSON.stringify(executionResult, null, 2))"
+                    >
+                      <UIcon name="i-lucide-copy" class="size-3" />
+                      Copy Output
+                    </button>
+                  </div>
+
+                  <div v-if="executingTool" class="p-4 rounded-xl border border-dashed flex items-center justify-center text-[12px] text-secondary gap-2" style="border-color: var(--border-subtle);">
+                    <UIcon name="i-lucide-loader-2" class="size-4 animate-spin text-accent" />
+                    Executing tool on host...
+                  </div>
+
+                  <div v-else-if="executionError" class="p-4 rounded-xl border border-error/20 bg-error/5 text-error font-mono text-[11px] whitespace-pre-wrap">
+                    {{ executionError }}
+                  </div>
+
+                  <div v-else-if="executionResult" class="p-4 rounded-xl border bg-surface-base font-mono text-[11px] max-h-[250px] overflow-y-auto custom-scrollbar whitespace-pre-wrap" style="border-color: var(--border-subtle); color: var(--text-primary);">
+                    {{ JSON.stringify(executionResult, null, 2) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Interactive Chat -->
+        <div v-else-if="activeTab === 'chat'" class="flex-1 flex flex-col min-h-0">
+          <div class="flex-1 min-h-0">
+            <TestPanel :agent-slug="`mcp-${name}`" :agent-name="name" :is-draft="isDirty" />
+          </div>
+          <ExecutionInspector :tool-calls="toolCalls" :is-streaming="studioStreaming" />
+        </div>
       </div>
     </div>
 

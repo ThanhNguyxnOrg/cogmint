@@ -1,5 +1,5 @@
 import type { AgentFrontmatter } from '~/types'
-import { MODEL } from '~/utils/models'
+
 
 export interface AgentTemplate {
   id: string
@@ -15,7 +15,7 @@ export const agentTemplates: AgentTemplate[] = [
     frontmatter: {
       name: 'code-reviewer',
       description: 'Reviews pull requests and code changes for bugs, style issues, and security vulnerabilities.',
-      model: MODEL.SONNET,
+      model: 'sonnet',
       color: 'blue',
     },
     body: `You are a senior code reviewer. When asked to review code:
@@ -34,7 +34,7 @@ Be concise. Lead with the most important issues. Use code snippets when suggesti
     frontmatter: {
       name: 'writing-assistant',
       description: 'Helps draft, edit, and improve written content — emails, docs, blog posts.',
-      model: MODEL.SONNET,
+      model: 'sonnet',
       color: 'purple',
     },
     body: `You are a writing assistant. Help the user write clear, compelling content.
@@ -54,7 +54,7 @@ You can help with: emails, documentation, blog posts, announcements, and any pro
     frontmatter: {
       name: 'debug-helper',
       description: 'Systematically diagnoses bugs by reproducing, isolating, and fixing issues.',
-      model: MODEL.OPUS,
+      model: 'opus',
       color: 'red',
     },
     body: `You are a systematic debugger. When the user reports a bug:
@@ -73,7 +73,7 @@ Never guess. If you need more information, ask. Read the relevant code before su
     frontmatter: {
       name: 'project-planner',
       description: 'Breaks down features into tasks, estimates effort, and creates implementation plans.',
-      model: MODEL.SONNET,
+      model: 'sonnet',
       color: 'green',
     },
     body: `You are a project planner. Help the user break down work into actionable steps.
@@ -93,7 +93,7 @@ Keep plans practical. Don't over-engineer the plan itself. Prefer starting with 
     frontmatter: {
       name: 'documentation-writer',
       description: 'Creates and maintains technical documentation, READMEs, and API docs.',
-      model: MODEL.SONNET,
+      model: 'sonnet',
       color: 'cyan',
     },
     body: `You are a documentation specialist. Write docs that developers actually want to read.
@@ -114,7 +114,7 @@ When writing API docs: Endpoint → Parameters → Example Request → Example R
     frontmatter: {
       name: 'email-drafter',
       description: 'Drafts professional emails — replies, follow-ups, cold outreach, and internal comms.',
-      model: MODEL.SONNET,
+      model: 'sonnet',
       color: 'purple',
     },
     body: `You are an email drafting assistant. Help the user write clear, professional emails.
@@ -138,7 +138,7 @@ Rules:
     frontmatter: {
       name: 'meeting-summarizer',
       description: 'Turns meeting notes and transcripts into structured summaries with action items.',
-      model: MODEL.SONNET,
+      model: 'sonnet',
       color: 'green',
     },
     body: `You are a meeting summarizer. Turn raw notes or transcripts into clear, actionable summaries.
@@ -168,7 +168,7 @@ Rules:
     frontmatter: {
       name: 'research-assistant',
       description: 'Helps research topics, summarize findings, and organize information.',
-      model: MODEL.OPUS,
+      model: 'opus',
       color: 'orange',
     },
     body: `You are a research assistant. Help the user explore topics, gather information, and synthesize findings.
@@ -193,7 +193,7 @@ Rules:
     frontmatter: {
       name: 'social-media-writer',
       description: 'Creates engaging social media posts for LinkedIn, Twitter/X, and other platforms.',
-      model: MODEL.SONNET,
+      model: 'sonnet',
       color: 'pink',
     },
     body: `You are a social media copywriter. Create engaging posts that drive interaction.

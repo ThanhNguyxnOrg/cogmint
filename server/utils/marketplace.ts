@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { resolveClaudePath } from './claudeDir'
+import { runClaude } from './cli'
 
 interface KnownMarketplace {
   source: { source: string; url?: string; repo?: string; path?: string }
@@ -24,7 +25,38 @@ interface ScannedPlugin {
   commandCount: number
 }
 
+let isAutoInitializing = false
+
+export async function ensureDefaultMarketplaces(): Promise<void> {
+  if (isAutoInitializing) return
+  isAutoInitializing = true
+
+  try {
+    const known = await readKnownMarketplacesInternal()
+    const keys = Object.keys(known)
+    
+    // Check if official registry is already added
+    const hasOfficial = keys.some(k => k.includes('official') || known[k]?.source.url?.includes('claude-plugins-official'))
+    if (!hasOfficial) {
+      console.log('[Marketplace] Auto-registering official Claude plugins marketplace...')
+      await runClaude(['plugin', 'marketplace', 'add', 'https://github.com/anthropics/claude-plugins-official'])
+    }
+  } catch (err) {
+    console.warn('[Marketplace] Failed to auto-initialize default marketplaces:', err)
+  } finally {
+    isAutoInitializing = false
+  }
+}
+
 export async function readKnownMarketplaces(): Promise<Record<string, KnownMarketplace>> {
+  const marketplaces = await readKnownMarketplacesInternal()
+  if (Object.keys(marketplaces).length === 0) {
+    ensureDefaultMarketplaces().catch(console.error)
+  }
+  return marketplaces
+}
+
+async function readKnownMarketplacesInternal(): Promise<Record<string, KnownMarketplace>> {
   const path = resolveClaudePath('plugins', 'known_marketplaces.json')
   if (!existsSync(path)) return {}
   try {

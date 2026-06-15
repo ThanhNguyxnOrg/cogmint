@@ -4,7 +4,7 @@ import { useClaudeCodeHistory } from '~/composables/useClaudeCodeHistory'
 import { convertToDisplayMessages } from '~/utils/chatMessageConverter'
 import { convertClaudeCodeMessages } from '~/utils/claudeCodeMessageConverter'
 import type { DisplayChatMessage, PermissionMode } from '~/types'
-import { MODEL_OPTIONS_CHAT, DEFAULT_MODEL } from '~/utils/models'
+import { useClaudeInfo } from '~/composables/useClaudeInfo'
 
 const props = defineProps<{
   executionOptions: {
@@ -231,10 +231,10 @@ function onLeftSidebarDragEnd() {
 }
 
 // Track the working directory for the current session (defaults to prop)
-const localWorkingDir = ref(props.executionOptions.workingDir || '')
+const localWorkingDir = ref(props.executionOptions?.workingDir || '')
 
 // Watch prop changes and update local state if not in a session
-watch(() => props.executionOptions.workingDir, (newDir) => {
+watch(() => props.executionOptions?.workingDir, (newDir) => {
   if (!currentSessionId.value && newDir) {
     localWorkingDir.value = newDir
   }
@@ -289,13 +289,28 @@ const permissionModeOptions: { value: PermissionMode; label: string; description
 
 const selectedPermissionMode = ref<PermissionMode>('default')
 
-// Model selector — options and default come from the shared model registry
-const selectedModel = ref<string>(DEFAULT_MODEL)
+// Model selector — options and default come dynamically from the Claude CLI settings
+const claudeInfo = useClaudeInfo()
+const selectedModel = ref<string>('default')
 
 // Sync model selection with historical session if available
 watch(() => history.selectedSession.value, (newSession) => {
   if (newSession?.model) {
     selectedModel.value = newSession.model
+  }
+}, { immediate: true, deep: true })
+
+// Watch selectedModel and update context window total in contextMonitor
+watch([selectedModel, () => claudeInfo.supportedModels.value], ([newModel]) => {
+  if (newModel) {
+    const total = claudeInfo.getModelContextWindow(newModel)
+    contextMonitor.metrics.value.contextWindow.total = total
+    
+    // Recalculate percentage
+    const used = contextMonitor.metrics.value.contextWindow.used
+    contextMonitor.metrics.value.contextWindow.percentage = total > 0 
+      ? Math.round((used / total) * 10000) / 100 
+      : 0
   }
 }, { immediate: true, deep: true })
 
@@ -516,7 +531,7 @@ function handleNewChat(payload?: { workingDir?: string; projectDisplayName?: str
     localWorkingDir.value = payload.workingDir
   } else {
     // Reset to prop's default if not provided
-    localWorkingDir.value = props.executionOptions.workingDir || ''
+    localWorkingDir.value = props.executionOptions?.workingDir || ''
   }
 
   if (route.path !== '/cli') {
@@ -785,6 +800,7 @@ onMounted(async () => {
   await Promise.all([
     allCommands.value.length === 0 ? fetchCommands() : Promise.resolve(),
     allSkills.value.length === 0 ? fetchSkills() : Promise.resolve(),
+    claudeInfo.loadInfo(),
   ])
 })
 
@@ -1158,7 +1174,7 @@ function handleOpenFile(filePath: string) {
            <ChatV2ModelSelector
              v-if="((viewMode === 'history' && urlSessionId) || (viewMode === 'live' && isLiveChat)) && !isMobileScreen"
              v-model="selectedModel"
-             :options="MODEL_OPTIONS_CHAT"
+             :options="claudeInfo.modelOptionsChat.value"
            />
 
 
@@ -1231,7 +1247,7 @@ function handleOpenFile(filePath: string) {
                   <UIcon :name="urlProjectName ? 'i-lucide-folder-root' : 'i-lucide-terminal'" class="size-10" style="color: var(--accent);" />
                 </div>
                 <h2 class="text-[20px] font-semibold mb-3" style="color: var(--text-primary); font-family: var(--font-sans);">
-                  {{ urlProjectName ? currentProjectDisplayName : 'Claude Code CLI' }}
+                  {{ urlProjectName ? currentProjectDisplayName : 'COGMINT CLI' }}
                 </h2>
                 <p class="text-[14px] leading-relaxed mb-8" style="color: var(--text-secondary);">
                   {{ urlProjectName ? 'Select a session from this folder or start a new conversation below.' : 'Select an existing session from the history or start a new conversation to begin.' }}
@@ -1483,7 +1499,7 @@ function handleOpenFile(filePath: string) {
 
           <!-- Details Content -->
           <div class="flex-1 overflow-y-auto">
-            <ChatV2ContextDetails :metrics="contextMonitor.metrics.value" />
+            <ChatV2ContextDetails :metrics="contextMonitor.metrics.value" :session-id="(urlSessionId || currentSessionId) ?? undefined" />
           </div>
         </div>
       </Transition>

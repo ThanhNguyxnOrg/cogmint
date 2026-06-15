@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, readdir, lstat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join, relative, basename } from 'node:path'
 import { resolveClaudePath } from './claudeDir'
 import { parseFrontmatter } from './frontmatter'
 import type { SkillFrontmatter, GithubImport, GithubImportsRegistry } from '~/types'
@@ -127,7 +127,7 @@ export async function detectSkillsLocal(
 
       if (frontmatter.name && frontmatter.description) {
         const relPath = relative(baseDir, file)
-        const parts = relPath.split('/')
+        const parts = relPath.split(/[\\/]/).filter(Boolean)
         const parentDir = parts.at(-2)
         const slug = parentDir || frontmatter.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -166,7 +166,7 @@ export async function detectAgentsLocal(
   const agentFiles = allMdFiles.filter(f => !f.toLowerCase().endsWith('skill.md'))
 
   for (const file of agentFiles) {
-    const fileName = file.split('/').pop()!
+    const fileName = basename(file)
     if (SKIP_FILENAMES.has(fileName)) continue
 
     try {
@@ -175,7 +175,7 @@ export async function detectAgentsLocal(
 
       if (frontmatter.name && frontmatter.description) {
         const relPath = relative(baseDir, file)
-        const parts = relPath.split('/')
+        const parts = relPath.split(/[\\/]/).filter(Boolean)
         const originalFileName = parts.at(-1) || ''
         let slug = originalFileName.replace(/\.md$/, '')
         

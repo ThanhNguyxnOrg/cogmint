@@ -46,7 +46,8 @@
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "install:launcher": "node scripts/distribution/install-cogmint.mjs"
+    "install:launcher": "node scripts/distribution/install-cogmint.mjs",
+    "install:shortcut": "node scripts/distribution/create-shortcut.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.177",

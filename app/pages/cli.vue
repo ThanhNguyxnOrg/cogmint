@@ -2,7 +2,7 @@
 const { executionOptions } = useCliExecution()
 
 useHead({
-  title: 'Claude Code',
+  title: 'CLI — COGMINT',
 })
 </script>
 

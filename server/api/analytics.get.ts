@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { getClaudeDir } from '../utils/claudeDir'
 import { listSessionHistories, loadSessionHistory } from '../utils/cliSession'
-import { getModelPricing } from '../utils/models'
+import { getModelPricing, getModelLabel } from '../utils/models'
 
 export interface ModelUsage {
   model: string
@@ -79,10 +79,19 @@ export default defineEventHandler(async (event) => {
     let totalRealSessions = cliHistories.length
 
     const sessionsList: SessionRecord[] = []
-    const modelStats: Record<string, ModelUsage> = {
-      'claude-sonnet-4': { model: 'Claude 3.5 Sonnet', tokens: { input: 0, output: 0, cached: 0 }, cost: 0, calls: 0 },
-      'claude-haiku-4': { model: 'Claude 3.5 Haiku', tokens: { input: 0, output: 0, cached: 0 }, cost: 0, calls: 0 },
-      'claude-opus-4': { model: 'Claude 3 Opus', tokens: { input: 0, output: 0, cached: 0 }, cost: 0, calls: 0 }
+    const modelStats: Record<string, ModelUsage> = {}
+
+    const getOrInitModelStats = (modelId: string) => {
+      const canonicalId = modelId || 'sonnet'
+      if (!modelStats[canonicalId]) {
+        modelStats[canonicalId] = {
+          model: getModelLabel(canonicalId),
+          tokens: { input: 0, output: 0, cached: 0 },
+          cost: 0,
+          calls: 0
+        }
+      }
+      return modelStats[canonicalId]!
     }
 
     // Process CLI session histories to accumulate stats
@@ -103,14 +112,12 @@ export default defineEventHandler(async (event) => {
         totalRealOutput += tokens.output
         totalRealCached += tokens.cached
 
-        const targetModel = modelStats[model]
-        if (targetModel) {
-          targetModel.tokens.input += tokens.input
-          targetModel.tokens.output += tokens.output
-          targetModel.tokens.cached += tokens.cached
-          targetModel.cost += cost
-          targetModel.calls += 1
-        }
+        const targetModel = getOrInitModelStats(model)
+        targetModel.tokens.input += tokens.input
+        targetModel.tokens.output += tokens.output
+        targetModel.tokens.cached += tokens.cached
+        targetModel.cost += cost
+        targetModel.calls += 1
 
         sessionsList.push({
           id: meta.id,
@@ -168,9 +175,10 @@ export default defineEventHandler(async (event) => {
       )
       
       // Setup base stats for models
-      modelStats['claude-sonnet-4']!.tokens = { input: 142000, output: 21000, cached: 68000 }
-      modelStats['claude-sonnet-4']!.cost = 0.786
-      modelStats['claude-sonnet-4']!.calls = 3
+      const sonnetStats = getOrInitModelStats('claude-sonnet-4')
+      sonnetStats.tokens = { input: 142000, output: 21000, cached: 68000 }
+      sonnetStats.cost = 0.786
+      sonnetStats.calls = 3
     }
 
     const summaryCost = totalRealCost > 0 ? totalRealCost : 12.45

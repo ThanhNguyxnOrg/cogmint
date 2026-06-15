@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { join, isAbsolute, resolve } from 'node:path'
+import { join, isAbsolute, resolve, relative } from 'node:path'
 import { getClaudeDir } from '../utils/claudeDir'
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +19,12 @@ export default defineEventHandler(async (event) => {
   const resolvedPath = resolve(isAbsolute(path) ? path : join(baseDir, path))
 
   // Security check: ensure the file is within baseDir OR claudeDir
-  const isInsideAllowedDir = resolvedPath.startsWith(baseDir) || resolvedPath.startsWith(claudeDir)
+  const relativeBase = relative(baseDir, resolvedPath)
+  const relativeClaude = relative(claudeDir, resolvedPath)
+  const isInsideAllowedDir = 
+    (relativeBase === '' || (!relativeBase.startsWith('..') && !isAbsolute(relativeBase))) ||
+    (relativeClaude === '' || (!relativeClaude.startsWith('..') && !isAbsolute(relativeClaude)))
+
   if (!isInsideAllowedDir) {
     throw createError({ statusCode: 403, message: 'Access denied: Path is outside allowed directories' })
   }

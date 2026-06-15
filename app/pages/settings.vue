@@ -132,6 +132,18 @@ async function saveLanguage() {
   await updateSetting({ locale: next })
 }
 
+const claudeCliPathInput = ref('')
+
+watch(settings, (val) => {
+  if (val) {
+    claudeCliPathInput.value = (val.claudeCliPath as string) || ''
+  }
+}, { immediate: true })
+
+async function saveClaudeCliPath() {
+  await updateSetting({ claudeCliPath: claudeCliPathInput.value.trim() })
+}
+
 async function toggleAlwaysThinking(enabled: boolean) {
   await updateSetting({ alwaysThinkingEnabled: enabled })
 }
@@ -316,6 +328,26 @@ const lineCount = computed(() => rawJson.value.split('\n').length)
             <div class="flex justify-end mt-2">
               <UButton :label="t('settings.saveLanguage')" size="xs" variant="soft" :loading="saving" @click="saveLanguage" />
             </div>
+          </div>
+
+          <div class="field-group border-t pt-4" style="border-color: var(--border-subtle);">
+            <label class="field-label">Claude CLI Path</label>
+            <div class="flex gap-2">
+              <input
+                v-model="claudeCliPathInput"
+                type="text"
+                class="field-input text-[12px] font-mono"
+                placeholder="e.g. C:\Users\Admin\AppData\Roaming\npm\claude.cmd"
+              />
+              <UButton
+                label="Save Path"
+                size="xs"
+                variant="soft"
+                :loading="saving"
+                @click="saveClaudeCliPath"
+              />
+            </div>
+            <span class="field-hint">Specify the custom executable path for the Claude Code CLI binary if it is installed in a custom directory.</span>
           </div>
           <div class="flex items-center justify-between">
             <div>

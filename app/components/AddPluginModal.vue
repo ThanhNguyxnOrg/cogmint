@@ -54,21 +54,31 @@ async function onManualInstall() {
   let marketplace = ''
   let plugin = ''
   
-  if (input.includes('/')) {
-    const parts = input.split('/')
-    marketplace = parts[0]!
-    plugin = parts.slice(1).join('/')
+  const isUrl = /^(https?:\/\/|git@)/i.test(input)
+  const isLocalPath = 
+    /^[a-zA-Z]:[\\/]/i.test(input) || 
+    input.startsWith('\\\\') || 
+    (input.startsWith('/') && input.split('/').length > 2) ||
+    input.startsWith('./') || 
+    input.startsWith('../') || 
+    input.startsWith('.\\') || 
+    input.startsWith('..\\')
+
+  if (isUrl || isLocalPath) {
+    plugin = input
+    marketplace = ''
   } else if (input.includes('@')) {
     const parts = input.split('@')
     plugin = parts[0]!
     marketplace = parts[1]!
+  } else if (input.includes('/')) {
+    const parts = input.split('/')
+    marketplace = parts[0]!
+    plugin = parts.slice(1).join('/')
   } else {
-    toast.add({ 
-      title: 'Invalid format', 
-      description: 'Please use "marketplace/plugin" or "plugin@marketplace"', 
-      color: 'error' 
-    })
-    return
+    // Treat as direct plugin name
+    plugin = input
+    marketplace = ''
   }
 
   isManualInstalling.value = true
@@ -116,7 +126,7 @@ async function onManualInstall() {
       <div class="flex gap-2">
         <input
           v-model="manualInput"
-          placeholder="e.g. marketplace/plugin or plugin@marketplace"
+          placeholder="e.g. plugin@marketplace, git URL, or local path"
           class="field-input text-[13px] flex-1"
           @keydown.enter="onManualInstall"
         />
@@ -130,7 +140,7 @@ async function onManualInstall() {
         />
       </div>
       <p class="text-[11px] text-meta">
-        Type the plugin's full identifier to install it directly.
+        Supports "plugin@marketplace", Git repository URLs, or local directory paths.
       </p>
     </div>
 

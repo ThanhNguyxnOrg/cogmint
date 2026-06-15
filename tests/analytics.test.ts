@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import { calculateCost } from '../server/utils/contextMonitor'
-import { getModelPricing, SERVER_MODEL_META } from '../server/utils/models'
+import { getModelPricing } from '../server/utils/models'
+import { parseModelMetaFromSDK } from '../server/utils/claudeInfo'
 
 describe('Analytics Metrics & Cost Utilities', () => {
   test('getModelPricing resolves sonnet pricing correctly', () => {
@@ -54,5 +55,55 @@ describe('Analytics Metrics & Cost Utilities', () => {
     expect(cost.input).toBeCloseTo(0.4)
     expect(cost.output).toBeCloseTo(0.2)
     expect(cost.cached).toBeCloseTo(0.008)
+  })
+})
+
+describe('Dynamic Model Probing & SDK Parser', () => {
+  test('parses default Opus model specs correctly', () => {
+    const meta = parseModelMetaFromSDK({
+      value: 'default',
+      displayName: 'Default',
+      description: 'Use the default model (currently Opus 4.8 (1M context)) · $5/$25 per Mtok'
+    })
+    expect(meta.contextWindow).toBe(1_000_000)
+    expect(meta.pricing.input).toBe(5.0)
+    expect(meta.pricing.output).toBe(25.0)
+    expect(meta.pricing.cached).toBe(0.5)
+  })
+
+  test('parses Sonnet specs correctly', () => {
+    const meta = parseModelMetaFromSDK({
+      value: 'sonnet',
+      displayName: 'Sonnet',
+      description: 'Sonnet 4.6 · Best for everyday tasks · $3/$15 per Mtok'
+    })
+    expect(meta.contextWindow).toBe(200_000)
+    expect(meta.pricing.input).toBe(3.0)
+    expect(meta.pricing.output).toBe(15.0)
+    expect(meta.pricing.cached).toBe(0.3)
+  })
+
+  test('parses Sonnet 1M context specs correctly', () => {
+    const meta = parseModelMetaFromSDK({
+      value: 'sonnet[1m]',
+      displayName: 'Sonnet (1M context)',
+      description: 'Sonnet 4.6 for long sessions · $3/$15 per Mtok'
+    })
+    expect(meta.contextWindow).toBe(1_000_000)
+    expect(meta.pricing.input).toBe(3.0)
+    expect(meta.pricing.output).toBe(15.0)
+    expect(meta.pricing.cached).toBe(0.3)
+  })
+
+  test('parses custom model with comma and decimal pricing correctly', () => {
+    const meta = parseModelMetaFromSDK({
+      value: 'custom-model',
+      displayName: 'Custom Model',
+      description: 'Model with 500,000 tokens context window · $2.5/$12.5 per Mtok'
+    })
+    expect(meta.contextWindow).toBe(500_000)
+    expect(meta.pricing.input).toBe(2.5)
+    expect(meta.pricing.output).toBe(12.5)
+    expect(meta.pricing.cached).toBe(0.25)
   })
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Agent, AgentFrontmatter, AgentTool, AgentMemory } from "~/types";
-import { MODEL, MODEL_IDS, MODEL_META } from "~/utils/models";
+import { useClaudeInfo } from "~/composables/useClaudeInfo";
 
 const props = defineProps<{
   mode: "create" | "edit";
@@ -37,9 +37,29 @@ const skillsModel = computed({
   set: (val: string[]) => { frontmatter.value.skills = val },
 })
 
+const claudeInfo = useClaudeInfo();
+
 onMounted(() => {
   fetchAllSkills();
+  claudeInfo.loadInfo();
 });
+
+const modelOptions = computed(() => {
+  if (claudeInfo.supportedModels.value.length === 0) {
+    return [
+      { value: 'opus', label: 'Opus' },
+      { value: 'sonnet', label: 'Sonnet' },
+      { value: 'haiku', label: 'Haiku' }
+    ]
+  }
+  // filter out "default" since 'none' is already the default option
+  return claudeInfo.supportedModels.value
+    .filter(m => m.value !== 'default')
+    .map(m => ({
+      value: m.value,
+      label: m.displayName || m.value
+    }))
+})
 
 const filteredSkills = computed(() => {
   const q = skillSearch.value.toLowerCase();
@@ -183,17 +203,21 @@ async function save() {
             none
           </button>
           <button
-            v-for="id in MODEL_IDS"
-            :key="id"
+            v-for="opt in modelOptions"
+            :key="opt.value"
             type="button"
+            class="pill-picker__option"
             :class="[
-              'pill-picker__option',
-              `pill-picker__option--${id}`,
-              { 'pill-picker__option--active': frontmatter.model === id },
+              {
+                'pill-picker__option--active': frontmatter.model === opt.value,
+                'pill-picker__option--opus': opt.value.toLowerCase().includes('opus'),
+                'pill-picker__option--sonnet': opt.value.toLowerCase().includes('sonnet'),
+                'pill-picker__option--haiku': opt.value.toLowerCase().includes('haiku'),
+              }
             ]"
-            @click="frontmatter.model = id"
+            @click="frontmatter.model = opt.value"
           >
-            {{ MODEL_META[id].label.toLowerCase() }}
+            {{ opt.label.toLowerCase() }}
           </button>
         </div>
       </div>

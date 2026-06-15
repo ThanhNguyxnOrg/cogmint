@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AgentFrontmatter, AgentMemory, AgentSkill, AgentTool } from '~/types'
-import { MODEL_META, MODEL_IDS } from '~/utils/models'
 import { getAgentColor, agentColorMap } from '~/utils/colors'
+import { useClaudeInfo } from '~/composables/useClaudeInfo'
 
 const props = defineProps<{
   frontmatter: AgentFrontmatter
@@ -16,14 +16,13 @@ const emit = defineEmits<{
 }>()
 
 const { fetchAll: fetchAllSkills, skills: allSkills } = useSkills()
+const claudeInfo = useClaudeInfo()
 
 const activeTab = ref<'instructions' | 'settings' | 'skills'>('instructions')
 
-const modelOptions = MODEL_IDS.map(id => ({
-  value: id,
-  label: MODEL_META[id].label,
-  description: MODEL_META[id].description
-}))
+const modelOptions = computed(() => {
+  return claudeInfo.modelOptionsChat.value
+})
 
 const memoryOptions: { label: string; value: AgentMemory; description: string }[] = [
   { label: 'User', value: 'user', description: 'Global memory at ~/.claude/agent-memory/' },
@@ -46,6 +45,7 @@ function updateFrontmatter(key: keyof AgentFrontmatter, value: unknown) {
 }
 
 onMounted(() => {
+  claudeInfo.loadInfo()
   fetchAllSkills()
 })
 

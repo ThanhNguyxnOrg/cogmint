@@ -1,6 +1,10 @@
 import type { ContextMetrics, FileChange, ToolCall, TokenUsage, CliWebSocketEvent } from '~/types'
+import { useClaudeInfo } from './useClaudeInfo'
 
 export function useContextMonitor() {
+  const claudeInfo = useClaudeInfo()
+  const defaultTotal = computed(() => claudeInfo.getModelContextWindow(undefined))
+
   // Initialize empty metrics
   const metrics = ref<ContextMetrics>({
     tokens: {
@@ -16,7 +20,7 @@ export function useContextMonitor() {
     },
     contextWindow: {
       used: 0,
-      total: 200_000,
+      total: defaultTotal.value,
       percentage: 0,
     },
     files: {
@@ -25,6 +29,13 @@ export function useContextMonitor() {
       deleted: [],
     },
     tools: [],
+  })
+
+  // Watch for dynamic CLI info loads/changes to update default total context limit
+  watch(defaultTotal, (newTotal) => {
+    if (metrics.value.tokens.input === 0 && metrics.value.tokens.output === 0) {
+      metrics.value.contextWindow.total = newTotal
+    }
   })
 
   const isMonitoring = ref(false)
@@ -61,7 +72,7 @@ export function useContextMonitor() {
       },
       contextWindow: {
         used: 0,
-        total: 200_000,
+        total: defaultTotal.value,
         percentage: 0,
       },
       files: {

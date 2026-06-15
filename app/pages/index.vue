@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getAgentColor } from "~/utils/colors";
-import { MODEL_IDS, getModelLabel, getModelColor, getModelBadgeClasses } from "~/utils/models";
+import { getModelLabel, getModelColor, getModelBadgeClasses } from "~/utils/models";
 const { t } = useI18n();
 
 const { claudeDir, set: setDir } = useClaudeDir();
@@ -108,14 +108,10 @@ async function changeDir() {
 
 const UNSET_KEY = 'unset';
 const modelBreakdown = computed(() => {
-  // Build initial counts from the canonical MODEL_IDS list — no hardcoded strings
-  const counts: Record<string, number> = Object.fromEntries(
-    [...MODEL_IDS, UNSET_KEY].map((k) => [k, 0])
-  );
+  const counts: Record<string, number> = {};
   for (const a of agents.value) {
-    const m = a.frontmatter.model;
-    const key = m && m in counts ? m : UNSET_KEY;
-    counts[key] = (counts[key] ?? 0) + 1;
+    const m = a.frontmatter.model || UNSET_KEY;
+    counts[m] = (counts[m] ?? 0) + 1;
   }
   return counts;
 });

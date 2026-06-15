@@ -8,7 +8,6 @@ import { normalizeSDKMessage } from '../messageNormalizer'
 import { resolveClaudePath } from '../claudeDir'
 import { parseFrontmatter } from '../frontmatter'
 import { detectSdkSession, loadSdkSessionMessages } from '../sdkSessionStorage'
-import { MODEL_ALIAS_KEY } from '../models'
 
 // Store active query instances for interruption
 interface QueryInstance {
@@ -264,7 +263,7 @@ export const claudeProviderInfo: ProviderInfo = {
   name: 'claude',
   displayName: 'Claude',
   description: 'Anthropic Claude via Claude Agent SDK',
-  models: Object.values(MODEL_ALIAS_KEY),
+  models: ['default', 'sonnet', 'sonnet[1m]', 'haiku'],
   supportsPermissions: true,
   supportsImages: true,
   supportsInterrupt: true,

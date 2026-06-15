@@ -109,91 +109,97 @@ export function useTerminal() {
   /**
    * Connect to WebSocket and create CLI session
    */
-  function connect(options?: {
+  async function connect(options?: {
     agentSlug?: string
     workingDir?: string
     onMessage?: (event: CliWebSocketEvent) => void
   }) {
-    // Determine WebSocket URL
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/api/cli/ws`
+    try {
+      const { token } = await $fetch<{ token: string }>('/api/token')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.host}/api/cli/ws?token=${token}`
 
-    ws.value = new WebSocket(wsUrl)
+      ws.value = new WebSocket(wsUrl)
 
-    ws.value.onopen = () => {
-      isConnected.value = true
-      connectionError.value = null
+      ws.value.onopen = () => {
+        isConnected.value = true
+        connectionError.value = null
 
-      // Send execute message to create session
-      if (ws.value && terminal.value) {
-        const message: CliWebSocketMessage = {
-          type: 'execute',
-          agentSlug: options?.agentSlug,
-          workingDir: options?.workingDir,
-          cols: terminal.value.cols,
-          rows: terminal.value.rows,
+        // Send execute message to create session
+        if (ws.value && terminal.value) {
+          const message: CliWebSocketMessage = {
+            type: 'execute',
+            agentSlug: options?.agentSlug,
+            workingDir: options?.workingDir,
+            cols: terminal.value.cols,
+            rows: terminal.value.rows,
+          }
+          ws.value.send(JSON.stringify(message))
+
+          // Show welcome message in terminal
+          terminal.value.writeln('\x1b[1;36m╔══════════════════════════════════════════════════╗\x1b[0m')
+          terminal.value.writeln('\x1b[1;36m║\x1b[0m  \x1b[1mClaude Code CLI Ready\x1b[0m                        \x1b[1;36m║\x1b[0m')
+          terminal.value.writeln('\x1b[1;36m║\x1b[0m  Connected to Claude Code                       \x1b[1;36m║\x1b[0m')
+          terminal.value.writeln('\x1b[1;36m╚══════════════════════════════════════════════════╝\x1b[0m')
+          terminal.value.writeln('')
         }
-        ws.value.send(JSON.stringify(message))
-
-        // Show welcome message in terminal
-        terminal.value.writeln('\x1b[1;36m╔══════════════════════════════════════════════════╗\x1b[0m')
-        terminal.value.writeln('\x1b[1;36m║\x1b[0m  \x1b[1mClaude Code CLI Ready\x1b[0m                        \x1b[1;36m║\x1b[0m')
-        terminal.value.writeln('\x1b[1;36m║\x1b[0m  Connected to Claude Code                       \x1b[1;36m║\x1b[0m')
-        terminal.value.writeln('\x1b[1;36m╚══════════════════════════════════════════════════╝\x1b[0m')
-        terminal.value.writeln('')
       }
-    }
 
-    ws.value.onmessage = (event) => {
-      try {
-        const message: CliWebSocketEvent = JSON.parse(event.data)
+      ws.value.onmessage = (event) => {
+        try {
+          const message: CliWebSocketEvent = JSON.parse(event.data)
 
-        // Handle different message types
-        switch (message.type) {
-          case 'session':
-            sessionId.value = message.sessionId
-            break
+          // Handle different message types
+          switch (message.type) {
+            case 'session':
+              sessionId.value = message.sessionId
+              break
 
-          case 'output':
-            if (terminal.value) {
-              terminal.value.write(message.data)
-            }
-            break
+            case 'output':
+              if (terminal.value) {
+                terminal.value.write(message.data)
+              }
+              break
 
-          case 'error':
-            connectionError.value = message.error
-            console.error('[Terminal] Error:', message.error)
+            case 'error':
+              connectionError.value = message.error
+              console.error('[Terminal] Error:', message.error)
 
-            // If Claude CLI not found, show helpful message
-            if (message.error?.includes('Claude CLI not found')) {
-              connectionError.value = 'Claude CLI not found. Check /api/debug/claude-cli for details or set CLAUDE_CLI_PATH env var.'
-            }
-            break
+              // If Claude CLI not found, show helpful message
+              if (message.error?.includes('Claude CLI not found')) {
+                connectionError.value = 'Claude CLI not found. Check /api/debug/claude-cli for details or set CLAUDE_CLI_PATH env var.'
+              }
+              break
 
-          case 'exit':
-            console.log('[Terminal] Session exited with code:', message.exitCode)
-            break
+            case 'exit':
+              console.log('[Terminal] Session exited with code:', message.exitCode)
+              break
+          }
+
+          // Call custom message handler
+          if (options?.onMessage) {
+            options.onMessage(message)
+          }
+        } catch (error) {
+          console.error('[Terminal] Failed to parse message:', error)
         }
-
-        // Call custom message handler
-        if (options?.onMessage) {
-          options.onMessage(message)
-        }
-      } catch (error) {
-        console.error('[Terminal] Failed to parse message:', error)
       }
-    }
 
-    ws.value.onerror = (error) => {
-      console.error('[Terminal] WebSocket error:', error)
-      connectionError.value = 'WebSocket connection error'
-      isConnected.value = false
-    }
+      ws.value.onerror = (error) => {
+        console.error('[Terminal] WebSocket error:', error)
+        connectionError.value = 'WebSocket connection error'
+        isConnected.value = false
+      }
 
-    ws.value.onclose = () => {
+      ws.value.onclose = () => {
+        isConnected.value = false
+        sessionId.value = null
+        console.log('[Terminal] WebSocket closed')
+      }
+    } catch (err: any) {
+      console.error('[Terminal] Connection setup failed:', err)
+      connectionError.value = 'Failed to retrieve connection token'
       isConnected.value = false
-      sessionId.value = null
-      console.log('[Terminal] WebSocket closed')
     }
   }
 

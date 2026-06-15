@@ -8,6 +8,7 @@ export interface McpServer {
   headers?: Record<string, string>
   scope: 'global' | 'project'
   disabled?: boolean
+  untrusted?: boolean
 }
 
 export function useMCP() {

@@ -1,5 +1,6 @@
 import type { ProviderAdapter, ProviderInfo } from './types'
 import { claudeProvider, claudeProviderInfo } from './claudeProvider'
+import { getCachedClaudeInfo } from '../claudeInfo'
 
 /**
  * Provider registry for managing multiple providers.
@@ -37,7 +38,17 @@ class ProviderRegistry {
    */
   getInfo(name?: string): ProviderInfo | undefined {
     const providerName = name || this.defaultProvider
-    return this.providerInfo.get(providerName)
+    const info = this.providerInfo.get(providerName)
+    if (providerName === 'claude' && info) {
+      const claudeInfo = getCachedClaudeInfo()
+      if (claudeInfo?.supportedModels && claudeInfo.supportedModels.length > 0) {
+        return {
+          ...info,
+          models: claudeInfo.supportedModels.map(m => m.value)
+        }
+      }
+    }
+    return info
   }
 
   /**
@@ -79,7 +90,7 @@ class ProviderRegistry {
    * Get all provider info
    */
   getAllInfo(): ProviderInfo[] {
-    return Array.from(this.providerInfo.values())
+    return Array.from(this.providerInfo.keys()).map(name => this.getInfo(name)!)
   }
 }
 

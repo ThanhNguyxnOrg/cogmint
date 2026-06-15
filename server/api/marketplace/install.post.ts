@@ -1,11 +1,11 @@
 export default defineEventHandler(async (event) => {
-  const { marketplace, plugin } = await readBody<{ marketplace: string; plugin: string }>(event)
+  const { marketplace, plugin } = await readBody<{ marketplace?: string; plugin: string }>(event)
 
-  if (!marketplace || !plugin) {
-    throw createError({ statusCode: 400, message: 'marketplace and plugin are required' })
+  if (!plugin) {
+    throw createError({ statusCode: 400, message: 'plugin is required' })
   }
 
-  const identifier = `${plugin}@${marketplace}`
+  const identifier = marketplace ? `${plugin}@${marketplace}` : plugin
   console.log(`[Marketplace] Installing plugin: ${identifier}`)
 
   try {

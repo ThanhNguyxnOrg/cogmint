@@ -1,15 +1,65 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 const { t } = useI18n()
 
 const { servers, loading, error, fetchServers, addServer, toggleServer, removeServer } = useMCP()
 const { isPanelOpen, pendingInput } = useChat()
+const { workingDir } = useWorkingDir()
+const toast = useToast()
 
 const isAddModalOpen = ref(false)
 const showImportModal = ref(false)
 const adding = ref(false)
 
-onMounted(() => fetchServers())
+const isTrusted = ref(true)
+const hasProjectConfig = ref(false)
+const checkingTrust = ref(false)
+
+async function checkWorkspaceTrust() {
+  if (!workingDir.value) {
+    isTrusted.value = true
+    hasProjectConfig.value = false
+    return
+  }
+  checkingTrust.value = true
+  try {
+    const res = await $fetch<{ trusted: boolean; hasProjectConfig: boolean }>('/api/mcp/trust', {
+      query: { workingDir: workingDir.value }
+    })
+    isTrusted.value = res.trusted
+    hasProjectConfig.value = res.hasProjectConfig
+  } catch {
+    isTrusted.value = true
+    hasProjectConfig.value = false
+  } finally {
+    checkingTrust.value = false
+  }
+}
+
+async function trustWorkspace() {
+  if (!workingDir.value) return
+  try {
+    await $fetch('/api/mcp/trust', {
+      method: 'POST',
+      body: { workingDir: workingDir.value, trust: true }
+    })
+    isTrusted.value = true
+    toast.add({ title: 'Workspace trusted successfully', color: 'success' })
+    fetchServers()
+  } catch (err: any) {
+    toast.add({ title: 'Failed to trust workspace', description: err.message, color: 'error' })
+  }
+}
+
+onMounted(() => {
+  fetchServers()
+  checkWorkspaceTrust()
+})
+
+watch(workingDir, () => {
+  fetchServers()
+  checkWorkspaceTrust()
+})
 
 async function onAddServer(payload: any) {
   adding.value = true
@@ -38,6 +88,22 @@ function testServer(name: string) {
         <UButton :label="t('mcp.newServer')" icon="i-lucide-plus" size="sm" @click="isAddModalOpen = true" />
       </template>
     </PageHeader>
+
+    <!-- Workspace Trust Banner -->
+    <div v-if="!isTrusted && hasProjectConfig" class="mx-6 mt-4 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 flex items-start justify-between gap-4">
+      <div class="flex gap-3 min-w-0">
+        <UIcon name="i-lucide-shield-alert" class="size-5 shrink-0 mt-0.5 text-yellow-500" />
+        <div class="min-w-0">
+          <h4 class="text-[13px] font-semibold text-primary">Untrusted Workspace</h4>
+          <p class="text-[12px] text-secondary leading-relaxed mt-0.5">
+            This directory contains a project-level MCP config (<code class="font-mono bg-surface-raised px-1 py-0.5 rounded">.mcp.json</code>) which could execute code.
+            Tool execution and listing are disabled until you trust this workspace directory.
+          </p>
+          <p class="text-[11px] text-meta font-mono mt-1 truncate">{{ workingDir }}</p>
+        </div>
+      </div>
+      <UButton label="Trust Workspace" size="xs" color="warning" icon="i-lucide-shield-check" @click="trustWorkspace" />
+    </div>
 
     <div class="px-6 py-4 flex-1">
       <p class="text-[13px] mb-6 leading-relaxed text-label max-w-2xl">
@@ -76,14 +142,17 @@ function testServer(name: string) {
                 <span v-if="server.transport" class="text-[10px] px-1.5 py-0.5 rounded font-medium tracking-wide uppercase bg-surface-raised text-meta border border-subtle">
                   {{ server.transport }}
                 </span>
-                  <span v-if="server.disabled" class="text-[10px] px-1.5 py-0.5 rounded font-medium tracking-wide uppercase bg-error/10 text-error border border-error/20">
-                    {{ t('mcp.disabled') }}
-                  </span>
+                <span v-if="server.disabled" class="text-[10px] px-1.5 py-0.5 rounded font-medium tracking-wide uppercase bg-error/10 text-error border border-error/20">
+                  {{ t('mcp.disabled') }}
+                </span>
+                <span v-if="server.untrusted" class="text-[10px] px-1.5 py-0.5 rounded font-medium tracking-wide uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                  Untrusted
+                </span>
               </div>
-              <div v-if="server.transport === 'stdio'" class="text-[12px] font-mono text-meta truncate" :title="server.command + ' ' + (server.args?.join(' ') || '')" :class="{ 'opacity-50': server.disabled }">
+              <div v-if="server.transport === 'stdio'" class="text-[12px] font-mono text-meta truncate" :title="server.command + ' ' + (server.args?.join(' ') || '')" :class="{ 'opacity-50': server.disabled || server.untrusted }">
                 {{ server.command }} <span v-if="server.args?.length">{{ server.args.join(' ') }}</span>
               </div>
-              <div v-else class="text-[12px] font-mono text-meta truncate" :title="server.url" :class="{ 'opacity-50': server.disabled }">
+              <div v-else class="text-[12px] font-mono text-meta truncate" :title="server.url" :class="{ 'opacity-50': server.disabled || server.untrusted }">
                 {{ server.url }}
               </div>
             </div>
@@ -102,7 +171,7 @@ function testServer(name: string) {
             </div>
           </div>
 
-          <div v-if="(server.env && Object.keys(server.env).length) || (server.headers && Object.keys(server.headers).length)" class="mt-auto pt-3 border-t border-subtle flex items-center gap-2" :class="{ 'opacity-50': server.disabled }">
+          <div v-if="(server.env && Object.keys(server.env).length) || (server.headers && Object.keys(server.headers).length)" class="mt-auto pt-3 border-t border-subtle flex items-center gap-2" :class="{ 'opacity-50': server.disabled || server.untrusted }">
             <UIcon :name="server.transport === 'stdio' ? 'i-lucide-key' : 'i-lucide-shield-check'" class="size-3 text-meta" />
             <span class="text-[11px] text-meta">
               {{ server.transport === 'stdio' ? `Has ${Object.keys(server.env || {}).length} env variable(s)` : `Has ${Object.keys(server.headers || {}).length} header(s)` }}
