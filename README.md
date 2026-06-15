@@ -147,6 +147,19 @@ Scale your local ecosystem with better control.
 
 ![Explore](docs/images/explore.png)
 
+
+---
+
+### 5) Analytics and Cost Tracking
+
+Track your resource consumption and token expenditures in real time.
+
+- input/output token usage per session
+- Dynamic cost calculators based on model characteristics
+- Performance and API request duration tracking
+
+![Analytics](docs/images/analytics.png)
+
 ---
 
 ## UI Preview
