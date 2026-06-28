@@ -25,7 +25,7 @@ jobs:
           steps.metadata.outputs.package-ecosystem == 'github_actions' ||
           contains(steps.metadata.outputs.dependency-group-name, 'dev-tooling')
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
