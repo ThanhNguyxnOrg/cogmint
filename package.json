@@ -73,6 +73,6 @@
     "isomorphic-dompurify": "^3.18.0",
     "typescript": "^6.0",
     "vitest": "^4.1.9",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^3.3.6"
   }
 }
