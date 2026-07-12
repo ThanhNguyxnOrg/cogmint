@@ -71,7 +71,7 @@
     "@iconify-json/lucide": "^1.2.116",
     "@types/ws": "^8.18.1",
     "isomorphic-dompurify": "^3.18.0",
-    "typescript": "^6.0",
+    "typescript": "^7.0",
     "vitest": "^4.1.10",
     "vue-tsc": "^2.2.0"
   }
