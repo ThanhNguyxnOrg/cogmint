@@ -11,7 +11,7 @@ import { detectSdkSession, loadSdkSessionMessages } from '../sdkSessionStorage'
 
 // Store active query instances for interruption
 interface QueryInstance {
-  interrupt(): Promise<void>
+  interrupt(): Promise<any>
   [Symbol.asyncIterator](): AsyncIterator<any>
 }
 
