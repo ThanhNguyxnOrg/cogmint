@@ -52,6 +52,13 @@ jobs:
           cd dist
           sha256sum *.tar.gz *.zip > checksums.txt
 
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -60,3 +67,5 @@ jobs:
             dist/cogmint-windows-x64.zip
             dist/cogmint-macos-arm64.tar.gz
             dist/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
