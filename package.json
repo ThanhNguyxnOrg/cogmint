@@ -68,7 +68,7 @@
     "yaml": "^2.9"
   },
   "devDependencies": {
-    "@iconify-json/lucide": "^1.2.116",
+    "@iconify-json/lucide": "^1.2.134",
     "@types/ws": "^8.18.1",
     "isomorphic-dompurify": "^4.2.0",
     "typescript": "^6.0",
