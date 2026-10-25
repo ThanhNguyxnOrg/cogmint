@@ -70,7 +70,7 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.145",
     "@types/ws": "^8.18.2",
-    "isomorphic-dompurify": "^4.5.0",
+    "isomorphic-dompurify": "^4.6.0",
     "typescript": "^6.0",
     "vitest": "^5.0.5",
     "vue-tsc": "^3.3.13"
