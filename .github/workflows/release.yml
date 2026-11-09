@@ -1,12 +1,11 @@
 name: release-cogmint
 
 on:
-  push:
-    tags:
-      - 'v*'
+  create
 
 jobs:
   build-and-release:
+    if: github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -59,13 +58,13 @@ jobs:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: |
-            dist/cogmint-linux-x64.tar.gz
-            dist/cogmint-windows-x64.zip
-            dist/cogmint-macos-arm64.tar.gz
-            dist/checksums.txt
+      - name: Upload assets to central draft release
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ github.event.ref }}
+        run: |
+          gh release upload "$TAG" \
+            dist/cogmint-linux-x64.tar.gz \
+            dist/cogmint-windows-x64.zip \
+            dist/cogmint-macos-arm64.tar.gz \
+            dist/checksums.txt --clobber
