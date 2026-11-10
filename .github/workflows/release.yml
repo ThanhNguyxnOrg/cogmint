@@ -8,7 +8,7 @@ jobs:
     if: github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout
@@ -51,20 +51,24 @@ jobs:
           cd dist
           sha256sum *.tar.gz *.zip > checksums.txt
 
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v3
+      - name: Upload packaged assets for the shared publisher
+        uses: actions/upload-artifact@v7
         with:
-          app-id: ${{ secrets.BOT_APP_ID }}
-          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          name: release-assets-cogmint
+          path: |
+            dist/cogmint-linux-x64.tar.gz
+            dist/cogmint-windows-x64.zip
+            dist/cogmint-macos-arm64.tar.gz
+            dist/checksums.txt
+          if-no-files-found: error
 
-      - name: Upload assets to central draft release
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          TAG: ${{ github.event.ref }}
-        run: |
-          gh release upload "$TAG" \
-            dist/cogmint-linux-x64.tar.gz \
-            dist/cogmint-windows-x64.zip \
-            dist/cogmint-macos-arm64.tar.gz \
-            dist/checksums.txt --clobber
+  publish:
+    needs: build-and-release
+    uses: ThanhNguyxnOrg/.github/.github/workflows/release-publish.yml@5c7ae3eaec9f2cc4f555561630a4c157128754d1
+    with:
+      tag: ${{ github.event.ref }}
+      artifact_pattern: release-assets-*
+      artifact_directory: dist/release
+    secrets:
+      BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
+      BOT_PRIVATE_KEY: ${{ secrets.BOT_PRIVATE_KEY }}
