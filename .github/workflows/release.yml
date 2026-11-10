@@ -3,6 +3,10 @@ name: release-cogmint
 on:
   create
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   build-and-release:
     if: github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')
@@ -64,6 +68,9 @@ jobs:
 
   publish:
     needs: build-and-release
+    permissions:
+      actions: read
+      contents: read
     uses: ThanhNguyxnOrg/.github/.github/workflows/release-publish.yml@5c7ae3eaec9f2cc4f555561630a4c157128754d1
     with:
       tag: ${{ github.event.ref }}
