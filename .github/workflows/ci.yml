@@ -1,35 +1,29 @@
-name: ci
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile || bun install
-
-      - name: Prepare Nuxt
-        run: bun run postinstall
-
-      - name: Typecheck
-        run: bun run typecheck
+  verify:
+    uses: ThanhNguyxnOrg/.github/.github/workflows/ci-node.yml@2bda8e8e8073a2578db4bbb1e0f6aaf21d061bcd
+    with:
+      job_name: Typecheck
+      node_version: "22"
+      package_manager: bun
+      package_manager_version: "1.4.4"
+      cache: npm
+      install_command: bun install --frozen-lockfile
+      prepare_command: bun run postinstall
+      typecheck_command: bun run typecheck
+      test_command: bun run test
