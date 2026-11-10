@@ -1,7 +1,13 @@
 name: release-cogmint
 
 on:
-  create
+  create:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to rebuild after a failed release (no tag is created).
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -9,14 +15,32 @@ permissions:
 
 jobs:
   build-and-release:
-    if: github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')
+    if: (github.event_name == 'create' && github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - name: Checkout
+      - name: Checkout the selected release tag
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate exact release tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Invalid release tag: $TAG"
+            exit 1
+          fi
+          CHECKED_OUT_TAG="$(git describe --tags --exact-match HEAD)"
+          if [[ "$CHECKED_OUT_TAG" != "$TAG" ]]; then
+            echo "::error::Checkout is not the exact requested tag: $TAG"
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -73,7 +97,7 @@ jobs:
       contents: read
     uses: ThanhNguyxnOrg/.github/.github/workflows/release-publish.yml@0cbda3691e1ec9695d3ede536e0b34ff1713f5f0
     with:
-      tag: ${{ github.event.ref }}
+      tag: ${{ inputs.tag || github.ref_name }}
       artifact_pattern: release-assets-*
       artifact_directory: dist/release
     secrets:
