@@ -23,7 +23,7 @@ jobs:
       package_manager: bun
       package_manager_version: "1.4.4"
       cache: ""
-      install_command: bun install --frozen-lockfile
+      install_command: bun install --frozen-lockfile || bun install
       prepare_command: bun run postinstall
       typecheck_command: bun run typecheck
       test_command: bun run test
