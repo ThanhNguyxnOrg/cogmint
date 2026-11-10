@@ -1,6 +1,6 @@
 {
   "name": "cogmint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Dark-first control plane for Claude Code orchestration. Visual ops surface for agents, skills, commands, workflows, and plugins.",
   "private": true,
   "type": "module",
