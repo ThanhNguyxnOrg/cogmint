@@ -22,7 +22,7 @@ jobs:
       node_version: "22"
       package_manager: bun
       package_manager_version: "1.4.4"
-      cache: npm
+      cache: ""
       install_command: bun install --frozen-lockfile
       prepare_command: bun run postinstall
       typecheck_command: bun run typecheck
