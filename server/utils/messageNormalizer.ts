@@ -110,6 +110,7 @@ export function normalizeSDKMessage(
       toolName: sdkMessage.tool_name,
       toolInput: undefined,
       metadata: {
+        toolUseId: sdkMessage.tool_use_id,
         elapsed: sdkMessage.elapsed_time_seconds,
         status: 'running',
       },
