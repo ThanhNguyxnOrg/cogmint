@@ -1,6 +1,6 @@
 [package]
 name = "cogmint"
-version = "2.0.0"
+version = "0.2.0"
 description = "COGMINT — Native 3-OS Multi-Harness AI Coding Agent Workstation"
 authors = ["COGMINT Contributors"]
 license = "MIT"
@@ -29,7 +29,7 @@ thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
-dirs = "6"
+dirs = "7"
 
 [dev-dependencies]
 tempfile = "3"

@@ -302,6 +302,9 @@ export function AppShell({
     let resumeId: string | null = null
     if (opts.resumeLatest) {
       resumeId = await resolveResumeSession(opts.harness.id, ws.path)
+      if (opts.harness.id === 'codex' && resumeId === null) {
+        window.alert('No Codex session was found in this directory. Starting a new session.')
+      }
     }
 
     const paneId = `pane-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
@@ -328,6 +331,16 @@ export function AppShell({
   const attentionCount = Object.values(panesById).filter(
     (p) => p.attentionState === 'needs_attention' || p.attentionState === 'failed',
   ).length
+
+  // Keep live terminals and their output channels mounted when their workspace is hidden.
+  const liveWorkspaceIds = new Set(
+    Object.values(panesById)
+      .filter((p) => p.attentionState !== 'hibernated')
+      .map((p) => p.workspaceId),
+  )
+  const stageWorkspaces = activeWorkspace
+    ? workspaces.filter((ws) => ws.id === activeWorkspaceId || liveWorkspaceIds.has(ws.id))
+    : [null]
 
   const activeProject = projects.find((p) => p.id === activeWorkspace?.projectId)
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -516,14 +529,20 @@ export function AppShell({
           </>
         )}
 
-        <div className={view === 'usage' ? 'hidden' : 'flex min-h-0 min-w-0 flex-1'}>
-          <SplitStage
-            workspace={activeWorkspace}
-            onLaunchAgent={(workspaceId, splitDirection, leafId) =>
-              setLaunchContext({ workspaceId, splitDirection, leafId })
-            }
-          />
-        </div>
+        {stageWorkspaces.map((ws) => (
+          <div
+            key={ws?.id ?? 'no-workspace'}
+            hidden={view === 'usage' || ws?.id !== activeWorkspace?.id}
+            className="flex min-h-0 min-w-0 flex-1"
+          >
+            <SplitStage
+              workspace={ws}
+              onLaunchAgent={(workspaceId, splitDirection, leafId) =>
+                setLaunchContext({ workspaceId, splitDirection, leafId })
+              }
+            />
+          </div>
+        ))}
 
         {view === 'usage' &&
           usageView?.({
