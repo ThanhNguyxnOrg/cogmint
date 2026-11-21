@@ -1,6 +1,7 @@
 pub mod shell;
 
 use crate::error::{AppError, AppResult};
+use crate::harness::attention::AttentionTracker;
 use crate::pty::shell::{build_wsl_command, detect_available_shells};
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
@@ -170,17 +171,28 @@ impl PtyManager {
 
         let sessions_ref = Arc::clone(&self.sessions);
         let on_event = Arc::new(on_event);
+        let harness_label = req.program.clone().unwrap_or_else(|| "shell".into());
         std::thread::Builder::new()
             .name(format!("pty-reader-{}", &pane_id))
             .spawn(move || {
                 let mut buf = [0u8; 4096];
                 let mut carry = Vec::new();
+                let mut tracker = AttentionTracker::new(harness_label);
                 loop {
                     match reader.read(&mut buf) {
                         Ok(0) => break,
                         Ok(n) => {
                             let text = decode_utf8_chunk(&mut carry, &buf[..n]);
                             if !text.is_empty() {
+                                let now_ms = chrono::Utc::now().timestamp_millis();
+                                if let Some((state, latest_words)) =
+                                    tracker.on_output(&text, now_ms)
+                                {
+                                    on_event(PtyStreamEvent::Attention {
+                                        state: state.as_str().to_string(),
+                                        latest_words,
+                                    });
+                                }
                                 on_event(PtyStreamEvent::Output { data: text });
                             }
                         }
@@ -199,6 +211,11 @@ impl PtyManager {
                     .and_then(|mut sess| sess.child.wait().ok())
                     .map(|status| status.exit_code() as i32);
 
+                let (final_state, latest_words) = tracker.on_exit(exit_code);
+                on_event(PtyStreamEvent::Attention {
+                    state: final_state.as_str().to_string(),
+                    latest_words,
+                });
                 on_event(PtyStreamEvent::Exit { exit_code });
             })
             .map_err(|e| AppError::Pty(format!("Failed to spawn PTY reader thread: {e}")))?;

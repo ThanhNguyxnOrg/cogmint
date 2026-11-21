@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod db;
 pub mod error;
+pub mod harness;
 pub mod pty;
 
 use tauri::Manager;
@@ -29,6 +30,10 @@ pub fn run() {
             commands::pty_cmds::kill_pty,
             commands::pty_cmds::detect_shells,
             commands::pty_cmds::list_wsl_distros,
+            commands::harness_cmds::list_harnesses,
+            commands::harness_cmds::upsert_custom_harness,
+            commands::harness_cmds::delete_custom_harness,
+            commands::harness_cmds::resolve_resume_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running COGMINT");
