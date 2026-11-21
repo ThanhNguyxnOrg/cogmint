@@ -1,8 +1,8 @@
-name: ci
+name: CI (3-OS Matrix)
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/cogmint-v2]
   pull_request:
     branches: [main]
 
@@ -11,25 +11,60 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
+
+      - name: Install Linux Tauri v2 dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
         run: bun install --frozen-lockfile || bun install
 
-      - name: Prepare Nuxt
-        run: bun run postinstall
+      - name: Frontend typecheck, unit tests & production build
+        run: |
+          bun run typecheck
+          bun run test
+          bun run build
 
-      - name: Typecheck
-        run: bun run typecheck
+      - name: Rust clippy & unit tests
+        run: |
+          cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml

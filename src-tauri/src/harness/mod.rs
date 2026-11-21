@@ -228,11 +228,9 @@ pub fn build_launch_argv(
                 args.push(sid.to_string());
             }
         }
-        "gemini" => {
-            if resume_session_id.is_some() {
-                args.push("--resume".into());
-                args.push("latest".into());
-            }
+        "gemini" if resume_session_id.is_some() => {
+            args.push("--resume".into());
+            args.push("latest".into());
         }
         _ => {}
     }

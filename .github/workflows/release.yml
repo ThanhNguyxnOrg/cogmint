@@ -1,71 +1,77 @@
-name: release-cogmint
+name: Release (3-OS Tauri v2)
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  publish-tauri:
+    name: Bundle (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - name: Install Linux Tauri v2 dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '20'
+          bun-version: latest
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Package linux x64
-        run: |
-          mkdir -p dist/cogmint-linux-x64
-          cp -r .output dist/cogmint-linux-x64/
-          cp package.json dist/cogmint-linux-x64/
-          tar -czf dist/cogmint-linux-x64.tar.gz -C dist cogmint-linux-x64
-
-      - name: Package windows x64
-        run: |
-          mkdir -p dist/cogmint-windows-x64
-          cp -r .output dist/cogmint-windows-x64/
-          cp package.json dist/cogmint-windows-x64/
-          cd dist && zip -r cogmint-windows-x64.zip cogmint-windows-x64
-
-      - name: Package macos arm64
-        run: |
-          mkdir -p dist/cogmint-macos-arm64
-          cp -r .output dist/cogmint-macos-arm64/
-          cp package.json dist/cogmint-macos-arm64/
-          tar -czf dist/cogmint-macos-arm64.tar.gz -C dist cogmint-macos-arm64
-
-      - name: Generate checksums
-        run: |
-          cd dist
-          sha256sum *.tar.gz *.zip > checksums.txt
-
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v3
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          app-id: ${{ secrets.BOT_APP_ID }}
-          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
         with:
-          files: |
-            dist/cogmint-linux-x64.tar.gz
-            dist/cogmint-windows-x64.zip
-            dist/cogmint-macos-arm64.tar.gz
-            dist/checksums.txt
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Build and Upload Tauri Bundles
+        uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'COGMINT v__VERSION__'
+          releaseBody: 'Native 3-OS release bundles for Windows, macOS, and Linux.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

@@ -1,224 +1,66 @@
 <div align="center">
 
 <p align="center">
-  <img src="public/favicon.svg" alt="COGMINT Logo" width="80" height="80" />
+  <img src="public/favicon.svg" alt="COGMINT Logo" width="76" height="76" />
 </p>
 
-# COGMINT
+# COGMINT v2
 
 <p>
-  <strong>Dark-first control plane for Claude Code orchestration.</strong>
-</p>
-
-<p>
-  <a href="https://nuxt.com/"><img alt="Nuxt 3" src="https://img.shields.io/badge/Nuxt-3-00DC82?style=for-the-badge&logo=nuxtdotjs&logoColor=white"></a>
-  <a href="https://vuejs.org/"><img alt="Vue 3" src="https://img.shields.io/badge/Vue-3-42B883?style=for-the-badge&logo=vuedotjs&logoColor=white"></a>
-  <a href="https://bun.sh/"><img alt="Bun" src="https://img.shields.io/badge/Bun-runtime-000000?style=for-the-badge&logo=bun&logoColor=white"></a>
-  <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-2F6FFF?style=for-the-badge"></a>
-  <img alt="Status" src="https://img.shields.io/badge/Status-Active-7A4DFF?style=for-the-badge">
-  <img alt="English First" src="https://img.shields.io/badge/i18n-English%20First-0B0F17?style=for-the-badge">
+  <strong>Native 3-OS Multi-Harness AI Coding Agent Workstation.</strong>
 </p>
 
 <p>
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#ui-preview">UI Preview</a> ·
-  <a href="#roadmap">Roadmap</a> ·
-  <a href="./CONTRIBUTING.md">Contributing</a>
+  <img alt="Tauri v2" src="https://img.shields.io/badge/Tauri-v2-24C8DB?style=for-the-badge&logo=tauri&logoColor=white">
+  <img alt="Rust" src="https://img.shields.io/badge/Rust-Core-000000?style=for-the-badge&logo=rust&logoColor=white">
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-2F6FFF?style=for-the-badge&logo=react&logoColor=white">
+  <img alt="3 OS" src="https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-05DCA3?style=for-the-badge">
+  <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-64748B?style=for-the-badge"></a>
 </p>
-
-<img src="docs/images/social-preview.png" alt="COGMINT preview" width="100%" />
 
 </div>
 
 ---
 
-## Why COGMINT
+## What is COGMINT v2?
 
-COGMINT turns Claude Code management from a config-file maze into a visual operating surface.
+COGMINT v2 is a **local-first, zero-telemetry desktop workstation** built on **Tauri v2 (Rust) + React 19 + Tailwind CSS v4** for running multiple CLI coding agents side-by-side in isolated Git worktrees.
 
-- Build and manage **multi-agent systems** faster
-- Control **skills, commands, workflows, and plugins** from one UI
-- Track **sessions and execution context** with less friction
-- Keep customization local to your own `.claude` workspace
+- **12 Built-In CLI Harnesses + Custom CLIs:** Claude Code (`claude`), Codex (`codex`), OpenCode (`opencode`), Gemini CLI (`gemini`), Copilot CLI (`copilot`), Antigravity (`agy`), Amp (`amp`), Kimi (`kimi`), Kiro (`kiro-cli`), Grok (`grok`), Mistral Vibe (`vibe`), Droid (`droid`), plus any user-defined CLI command.
+- **Attention-First Agent Rail:** Real-time `working`, `needs_attention`, `done`, `failed`, `idle`, and `hibernated` indicators with latest-words previews and native OS notifications.
+- **Real 3-OS PTYs (`portable-pty`):** Native ConPTY on Windows (`pwsh`, `powershell`, Git Bash, `cmd`, plus optional `wsl.exe` profiles) and `openpty` login shells on macOS/Linux, streamed via Tauri v2 `ipc::Channel` into WebGL `xterm.js` split panes.
+- **Git Worktree Isolation & Read-Only Diff Surface:** Safe worktree creation (never auto-deletes existing directories on error), `.worktreeinclude` copying with path-traversal protection, `notify` FS watching, unified diff inspection, quick commit, read-only `git merge-tree` conflict dry-run, and `Cmd/Ctrl+Click` external editor jump (VS Code, Cursor, Zed, custom).
+- **Real Local Usage & Cost Accounting:** Incremental parsers for local Claude Code, Codex, and OpenCode logs mapped to an updatable `pricing.json` catalog — **zero mock data, zero telemetry, zero OAuth scraping**.
+- **Crash-Safe Lazy Session Restore:** WAL SQLite journal restores panes in a dormant `hibernated` state (one click or `Enter` to resume) with an automatic crash-loop safe-mode guard.
+
+> **Legacy v1 (Nuxt):** The original Claude-only Nuxt control plane is preserved at git tag `archive/nuxt-v1`.
 
 ---
 
-## Quick Start
+## Development
+
+### Prerequisites
+- **Rust** (`>=1.80`, `cargo`, `clippy`)
+- **Bun** (`>=1.1`) or Node.js `>=20`
+- **Git** (`>=2.38` for `git merge-tree --write-tree`)
+- **Linux only:** `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf`
+
+### Commands
 
 ```bash
-git clone https://github.com/ThanhNguyxnOrg/cogmint.git
-cd cogmint
+# Install frontend dependencies
 bun install
-bun run dev
+
+# Run full desktop app in dev mode
+bun run tauri dev
+
+# Run all checks & tests
+bun run typecheck
+bun run test
+bun run build
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
-
-Open `http://localhost:3000`.
-
-> Requirements: Bun (recommended) or Node.js 18+.
-
-### Optional: Install via Claude Plugin Marketplace
-
-You can also install COGMINT as a Claude Code plugin and run it with `/cogmint`.
-
-1. Add marketplace source:
-
-```text
-/plugin marketplace add ThanhNguyxnOrg/cogmint
-```
-
-2. Install plugin from marketplace:
-
-```text
-/plugin install cogmint@cogmint-marketplace
-```
-
-3. Start COGMINT:
-
-```text
-/cogmint
-```
-
-If launcher command is missing after install, run OS-specific installer once:
-
-```bash
-# Windows
-pwsh -NoProfile -ExecutionPolicy Bypass -File "$PWD/scripts/distribution/install-cogmint.ps1"
-
-# macOS / Linux
-bash "$PWD/scripts/distribution/install-cogmint.sh"
-```
-
-Then run again:
-
-```text
-/cogmint
-```
-
----
-
-## Features
-
-### 1) Agent Orchestration Workspace
-
-Design, organize, and edit agents visually instead of hand-editing markdown everywhere.
-
-- Agent metadata + model setup
-- Prompt/instruction editing
-- Memory and behavior controls
-
-![Agent Workspace](docs/images/agent-main-view.png)
-![Agent Editor](docs/images/agent-editor.png)
-
----
-
-### 2) Chat + Studio Testing Loop
-
-Test behavior quickly with a live interface.
-
-- Real-time iteration
-- Tool/event visibility
-- Faster debugging cycle
-
-![Chat View](docs/images/chat-view.png)
-![Studio View](docs/images/studio.png)
-
----
-
-### 3) Workflow and Relationship Mapping
-
-Understand and operate your system topology.
-
-- Workflow builder for multi-step execution
-- Relationship graph for connected entities
-
-![Workflows](docs/images/workflows-view.png)
-![Graph](docs/images/graph.png)
-
----
-
-### 4) Skill and Plugin Operations
-
-Scale your local ecosystem with better control.
-
-- Skill import and management
-- Plugin visibility and toggles
-- Better discoverability via Explore
-
-![Explore](docs/images/explore.png)
-
-
----
-
-### 5) Analytics and Cost Tracking
-
-Track your resource consumption and token expenditures in real time.
-
-- input/output token usage per session
-- Dynamic cost calculators based on model characteristics
-- Performance and API request duration tracking
-
-![Analytics](docs/images/analytics.png)
-
----
-
-## UI Preview
-
-COGMINT uses a **dark-first cobalt/violet design system** for long sessions and reduced eye strain.
-
-Brand assets included in `public/`:
-
-- `favicon.svg`, `favicon.ico`
-- `favicon-16x16.png`, `favicon-32x32.png`
-- `apple-touch-icon.png`
-- `icon-192.png`, `icon-512.png`
-- `site.webmanifest`
-
----
-
-## i18n (English-first)
-
-Current baseline:
-
-- English default (`en`)
-- Locale field persisted in settings (`settings.locale`)
-- Vietnamese translation coverage across core and detail pages
-
-Language selector is available in **Settings**.
-
----
-
-## Tech Stack
-
-- Nuxt 3 + Vue 3
-- Nuxt UI + Tailwind CSS
-- VueFlow
-- Bun runtime
-- TypeScript
-
----
-
-## Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `CLAUDE_DIR` | Path to your Claude config directory | `~/.claude` |
-| `CLAUDE_CLI_PATH` | Optional explicit path to Claude CLI executable | Auto-detected |
-
----
-
-## Roadmap
-
-- [x] Full i18n coverage across all pages
-- [ ] GIF demo walkthroughs for README
-- [ ] Theme presets and workspace personalization packs
-- [ ] Extended test harness for workflow simulation
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
