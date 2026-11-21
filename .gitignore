@@ -22,3 +22,9 @@ logs
 .env
 .claude
 claudecodeui-logic-reference
+# COGMINT v2 (Tauri + Vite)
+src-tauri/target/
+dist/
+.superpowers/
+.worktrees/
+COGMINT AI Workstation.zip

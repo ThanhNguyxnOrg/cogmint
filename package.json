@@ -1,78 +1,45 @@
 {
   "name": "cogmint",
-  "version": "0.1.0",
-  "description": "Dark-first control plane for Claude Code orchestration. Visual ops surface for agents, skills, commands, workflows, and plugins.",
+  "version": "2.0.0",
+  "description": "Native 3-OS Multi-Harness AI Coding Agent Workstation",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "author": {
-    "name": "RealThanhNguyxn",
-    "url": "https://github.com/RealThanhNguyxn"
-  },
-  "homepage": "https://github.com/ThanhNguyxnOrg/cogmint#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ThanhNguyxnOrg/cogmint.git"
-  },
-  "bugs": {
-    "url": "https://github.com/ThanhNguyxnOrg/cogmint/issues"
-  },
-  "keywords": [
-    "cogmint",
-    "claude-code",
-    "anthropic",
-    "claude",
-    "agent-orchestration",
-    "ai-agents",
-    "nuxt",
-    "vue",
-    "typescript",
-    "dashboard",
-    "developer-tools",
-    "dark-theme"
-  ],
-  "engines": {
-    "node": ">=18.0.0",
-    "bun": ">=1.1.0"
-  },
-  "bin": {
-    "cogmint": "./bin/start.mjs"
-  },
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "typecheck": "nuxt typecheck",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "install:launcher": "node scripts/distribution/install-cogmint.mjs",
-    "install:shortcut": "node scripts/distribution/create-shortcut.mjs"
+    "tauri": "tauri"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.276",
-    "@nuxt/ui": "^4",
-    "@vue-flow/controls": "^1.1",
-    "@vue-flow/core": "^1.41",
-    "@vue-flow/minimap": "^1.5",
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/addon-search": "^0.16.0",
-    "@xterm/addon-web-links": "^0.12.0",
-    "@xterm/xterm": "^6.0.0",
-    "chokidar": "^5.0.0",
-    "marked": "^18.0.13",
-    "node-pty": "^1.1.0",
-    "nuxt": "^4.5",
-    "shiki": "^4.4.3",
-    "ws": "^8.21.3",
-    "yaml": "^2.9"
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-notification": "^2.2.0",
+    "@tauri-apps/plugin-opener": "^2.2.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-search": "^0.15.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/xterm": "^5.5.0",
+    "lucide-react": "^0.511.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zustand": "^5.0.4"
   },
   "devDependencies": {
-    "@iconify-json/lucide": "^1.2.134",
-    "@types/ws": "^8.18.1",
-    "isomorphic-dompurify": "^4.2.0",
-    "typescript": "^6.0",
-    "vitest": "^5.0.1",
-    "vue-tsc": "^3.3.11"
+    "@tailwindcss/vite": "^4.1.4",
+    "@tauri-apps/cli": "^2.5.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.3",
+    "vitest": "^3.1.2"
   }
 }
