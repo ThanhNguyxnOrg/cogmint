@@ -18,6 +18,7 @@ import { UnifiedDiffView } from './UnifiedDiffView'
 
 interface ChangesDrawerProps {
   workspace: WorkspaceRecord | null
+  width?: number
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -27,7 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
   '?': 'text-fg-3',
 }
 
-export function ChangesDrawer({ workspace }: ChangesDrawerProps) {
+export function ChangesDrawer({ workspace, width = 340 }: ChangesDrawerProps) {
   const editorPreset = useSettingsStore((s) => s.editorPreset)
   const [status, setStatus] = useState<GitStatusSummary | null>(null)
   const [mergePreview, setMergePreview] = useState<MergePreview | null>(null)
@@ -118,7 +119,10 @@ export function ChangesDrawer({ workspace }: ChangesDrawerProps) {
 
   if (!workspace) {
     return (
-      <aside className="flex h-full w-[340px] shrink-0 flex-col items-center justify-center border-l border-line bg-rail p-4 text-center text-[11px] text-fg-3">
+      <aside
+        style={{ width }}
+        className="flex h-full shrink-0 flex-col items-center justify-center border-l border-line bg-rail p-4 text-center text-[11px] text-fg-3"
+      >
         No workspace selected
       </aside>
     )
@@ -126,7 +130,10 @@ export function ChangesDrawer({ workspace }: ChangesDrawerProps) {
 
   if (!workspace.isGitRepo) {
     return (
-      <aside className="flex h-full w-[340px] shrink-0 flex-col items-center justify-center border-l border-line bg-rail p-6 text-center">
+      <aside
+        style={{ width }}
+        className="flex h-full shrink-0 flex-col items-center justify-center border-l border-line bg-rail p-6 text-center"
+      >
         <Folder className="size-6 text-fg-3" />
         <p className="mt-2 text-[12px] font-medium text-fg">Not a Git repository</p>
         <p className="mt-1 text-[11px] text-fg-3">
@@ -139,7 +146,10 @@ export function ChangesDrawer({ workspace }: ChangesDrawerProps) {
   const changes = status?.changes ?? []
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-line bg-rail">
+    <aside
+      style={{ width }}
+      className="flex h-full shrink-0 flex-col border-l border-line bg-rail"
+    >
       <div className="flex h-9 items-center justify-between border-b border-line px-3">
         <span className="text-[10px] font-semibold tracking-[0.12em] text-fg-3 uppercase">
           Changes ({changes.length})

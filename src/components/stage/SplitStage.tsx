@@ -1,9 +1,11 @@
+import { useRef } from 'react'
 import { AlertTriangle, Plus, TerminalSquare } from 'lucide-react'
 import type { HarnessSpec } from '../../types/ipc'
 import type { SplitDirection, SplitNode, WorkspaceRecord } from '../../types/workspace'
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore'
 import { killPty } from '../../lib/tauri'
 import { Btn } from '../ui/Primitives'
+import { ResizeHandle } from '../ui/ResizeHandle'
 import { PaneTabBar } from './PaneTabBar'
 import { TerminalPane } from './TerminalPane'
 
@@ -29,13 +31,18 @@ function SplitTreeView({
   const focusPane = useWorkspaceStore((s) => s.focusPane)
   const closePane = useWorkspaceStore((s) => s.closePane)
   const togglePinPane = useWorkspaceStore((s) => s.togglePinPane)
+  const resizeSplit = useWorkspaceStore((s) => s.resizeSplit)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   if (node.type === 'split') {
     const isRow = node.direction === 'vertical'
-    const firstPct = `${Math.round(node.ratio * 100)}%`
-    const secondPct = `${Math.round((1 - node.ratio) * 100)}%`
+    const firstPct = `${(node.ratio * 100).toFixed(2)}%`
+    const secondPct = `${((1 - node.ratio) * 100).toFixed(2)}%`
     return (
-      <div className={`flex h-full w-full min-h-0 min-w-0 ${isRow ? 'flex-row' : 'flex-col'}`}>
+      <div
+        ref={containerRef}
+        className={`flex h-full w-full min-h-0 min-w-0 ${isRow ? 'flex-row' : 'flex-col'}`}
+      >
         <div style={isRow ? { width: firstPct } : { height: firstPct }} className="min-h-0 min-w-0">
           <SplitTreeView
             node={node.first}
@@ -44,10 +51,17 @@ function SplitTreeView({
             onLaunchAgent={onLaunchAgent}
           />
         </div>
-        <div
-          className={`shrink-0 bg-line ${
-            isRow ? 'w-px h-full' : 'h-px w-full'
-          }`}
+        <ResizeHandle
+          orientation={isRow ? 'vertical' : 'horizontal'}
+          ariaLabel={isRow ? 'Resize vertical split' : 'Resize horizontal split'}
+          onDragDelta={(deltaPx) => {
+            const el = containerRef.current
+            if (!el) return
+            const total = isRow ? el.clientWidth : el.clientHeight
+            if (total <= 0) return
+            resizeSplit(workspace.id, node.id, node.ratio + deltaPx / total)
+          }}
+          onReset={() => resizeSplit(workspace.id, node.id, 0.5)}
         />
         <div
           style={isRow ? { width: secondPct } : { height: secondPct }}

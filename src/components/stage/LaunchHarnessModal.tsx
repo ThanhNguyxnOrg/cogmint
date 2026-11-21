@@ -106,7 +106,7 @@ export function LaunchHarnessModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-xl animate-modal-in rounded-lg border border-line-strong bg-raised shadow-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-xl flex-col animate-modal-in overflow-hidden rounded-lg border border-line-strong bg-raised shadow-2xl">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div className="flex items-center gap-2">
             <h2 className="text-[13px] font-semibold text-fg">Launch CLI Harness</h2>
@@ -134,7 +134,7 @@ export function LaunchHarnessModal({
           </div>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute top-2 left-2.5 size-3.5 text-fg-3" />
             <input

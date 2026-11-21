@@ -333,7 +333,7 @@ export function SettingsModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="flex h-[560px] w-full max-w-3xl animate-modal-in overflow-hidden rounded-lg border border-line-strong bg-raised shadow-2xl">
+      <div className="flex h-[min(560px,90vh)] w-full max-w-3xl animate-modal-in overflow-hidden rounded-lg border border-line-strong bg-raised shadow-2xl">
         <nav className="w-44 shrink-0 border-r border-line bg-rail p-2">
           <div className="px-2 py-1.5 text-[10px] font-semibold tracking-wider text-fg-3 uppercase">
             Settings

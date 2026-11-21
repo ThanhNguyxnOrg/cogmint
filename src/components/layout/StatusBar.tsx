@@ -42,7 +42,7 @@ export function StatusBar({ todaySpendUsd, todayTokens, onOpenUsage }: StatusBar
         )}
       </div>
 
-      <div className="flex items-center gap-3 tabular-nums">
+      <div className="hidden items-center gap-3 tabular-nums sm:flex">
         <span>
           {working} working ·{' '}
           <span className={waiting > 0 ? 'text-attn' : ''}>{waiting} waiting</span> · {hibernated}{' '}
@@ -50,7 +50,7 @@ export function StatusBar({ todaySpendUsd, todayTokens, onOpenUsage }: StatusBar
         </span>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <button
           type="button"
           onClick={onOpenUsage}
@@ -58,7 +58,7 @@ export function StatusBar({ todaySpendUsd, todayTokens, onOpenUsage }: StatusBar
         >
           ${todaySpendUsd.toFixed(2)} · {formatTokens(todayTokens)} tok
         </button>
-        <span className="hidden items-center gap-1.5 md:inline-flex">
+        <span className="hidden items-center gap-1.5 lg:inline-flex">
           <Kbd keys="⌘T" /> Agent
           <Kbd keys="⌘⇧A" /> Attention
           <Kbd keys="⌘K" /> Palette

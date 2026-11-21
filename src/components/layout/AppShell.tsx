@@ -2,13 +2,18 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
   BellRing,
   ChartColumnBig,
+  PanelLeft,
   PanelRight,
   Search,
   Settings,
   ShieldAlert,
 } from 'lucide-react'
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore'
-import { useSettingsStore } from '../../stores/useSettingsStore'
+import {
+  DEFAULT_LEFT_RAIL_WIDTH,
+  DEFAULT_RIGHT_DRAWER_WIDTH,
+  useSettingsStore,
+} from '../../stores/useSettingsStore'
 import type { HarnessSpec } from '../../types/ipc'
 import type { SplitDirection } from '../../types/workspace'
 import type { UsageSummary } from '../../types/usage'
@@ -30,6 +35,7 @@ import {
 import type { SettingsTabId } from '../settings/SettingsModal'
 import { isModKey } from '../../lib/keybindings'
 import { Kbd, LogoMark } from '../ui/Primitives'
+import { ResizeHandle } from '../ui/ResizeHandle'
 import { AttentionRail } from '../rail/AttentionRail'
 import { SplitStage } from '../stage/SplitStage'
 import { LaunchHarnessModal } from '../stage/LaunchHarnessModal'
@@ -37,7 +43,7 @@ import { StatusBar } from './StatusBar'
 import { CommandPalette, type PaletteCommand } from './CommandPalette'
 
 interface AppShellProps {
-  rightDrawer?: ReactNode
+  rightDrawer?: (props: { width: number }) => ReactNode
   usageView?: (props: { summary: UsageSummary | null; onReload: () => void; onBack: () => void }) => ReactNode
   settingsModal?: (props: {
     open: boolean
@@ -75,9 +81,17 @@ export function AppShell({
 
   const setAvailableShells = useSettingsStore((s) => s.setAvailableShells)
   const setWslDistros = useSettingsStore((s) => s.setWslDistros)
+  const leftRailWidth = useSettingsStore((s) => s.leftRailWidth)
+  const rightDrawerWidth = useSettingsStore((s) => s.rightDrawerWidth)
+  const setLeftRailWidth = useSettingsStore((s) => s.setLeftRailWidth)
+  const setRightDrawerWidth = useSettingsStore((s) => s.setRightDrawerWidth)
 
   const [view, setView] = useState<'workspace' | 'usage'>('workspace')
+  const [leftRailOpen, setLeftRailOpen] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(true)
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1440,
+  )
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<SettingsTabId>('auth')
@@ -167,6 +181,13 @@ export function AppShell({
     }
   }, [view, reloadUsage])
 
+  // Track window resize so sidebars adapt cleanly to any screen ratio / split-screen width
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   // 3-OS global keyboard shortcuts (capture phase so xterm focus does not swallow app shortcuts)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -191,6 +212,9 @@ export function AppShell({
       } else if (e.shiftKey && key === 'b') {
         e.preventDefault()
         setDrawerOpen((v) => !v)
+      } else if (!e.shiftKey && key === 'b') {
+        e.preventDefault()
+        setLeftRailOpen((v) => !v)
       } else if (e.shiftKey && key === 'u') {
         e.preventDefault()
         setView((v) => (v === 'usage' ? 'workspace' : 'usage'))
@@ -341,6 +365,14 @@ export function AppShell({
     })),
   ]
 
+  // Dynamically clamp sidebar widths so center terminal always retains usable space at any aspect ratio
+  const maxLeftForViewport = Math.max(180, Math.floor(viewportWidth * 0.34))
+  const effectiveLeftWidth = Math.min(leftRailWidth, maxLeftForViewport)
+  const remainingAfterLeft =
+    viewportWidth - (leftRailOpen ? effectiveLeftWidth : 0) - 320
+  const maxRightForViewport = Math.max(220, Math.min(680, Math.floor(remainingAfterLeft)))
+  const effectiveRightWidth = Math.min(rightDrawerWidth, maxRightForViewport)
+
   return (
     <main
       aria-label="COGMINT Workstation"
@@ -348,7 +380,19 @@ export function AppShell({
     >
       {/* Top Titlebar (36px) */}
       <header className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-line bg-rail px-3">
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            title="Toggle Workspaces Sidebar (Ctrl+B)"
+            onClick={() => setLeftRailOpen((v) => !v)}
+            className={`rounded p-1 transition-colors cursor-pointer ${
+              leftRailOpen
+                ? 'bg-white/[0.07] text-fg'
+                : 'text-fg-3 hover:bg-white/[0.05] hover:text-fg'
+            }`}
+          >
+            <PanelLeft className="size-3.5" />
+          </button>
           <div className="flex shrink-0 items-center gap-2">
             <LogoMark size={18} />
             <span className="text-[11px] font-semibold tracking-[0.16em] text-fg">COGMINT</span>
@@ -433,13 +477,23 @@ export function AppShell({
 
       {/* Main 3-Column Body */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <AttentionRail
-          width={260}
-          onAddProject={() => void handleAddProject()}
-          onRemoveProject={(projectId) => void handleRemoveProject(projectId)}
-          onCreateWorktree={(projectId) => setWorktreeProjectId(projectId)}
-          onLaunchAgent={(workspaceId) => setLaunchContext({ workspaceId })}
-        />
+        {leftRailOpen && (
+          <>
+            <AttentionRail
+              width={effectiveLeftWidth}
+              onAddProject={() => void handleAddProject()}
+              onRemoveProject={(projectId) => void handleRemoveProject(projectId)}
+              onCreateWorktree={(projectId) => setWorktreeProjectId(projectId)}
+              onLaunchAgent={(workspaceId) => setLaunchContext({ workspaceId })}
+            />
+            <ResizeHandle
+              orientation="vertical"
+              ariaLabel="Resize workspaces sidebar"
+              onDragDelta={(delta) => setLeftRailWidth(effectiveLeftWidth + delta)}
+              onReset={() => setLeftRailWidth(DEFAULT_LEFT_RAIL_WIDTH)}
+            />
+          </>
+        )}
 
         <div className={view === 'usage' ? 'hidden' : 'flex min-h-0 min-w-0 flex-1'}>
           <SplitStage
@@ -457,7 +511,17 @@ export function AppShell({
             onBack: () => setView('workspace'),
           })}
 
-        {view === 'workspace' && drawerOpen && rightDrawer}
+        {view === 'workspace' && drawerOpen && rightDrawer && (
+          <>
+            <ResizeHandle
+              orientation="vertical"
+              ariaLabel="Resize Git changes drawer"
+              onDragDelta={(delta) => setRightDrawerWidth(effectiveRightWidth - delta)}
+              onReset={() => setRightDrawerWidth(DEFAULT_RIGHT_DRAWER_WIDTH)}
+            />
+            {rightDrawer({ width: effectiveRightWidth })}
+          </>
+        )}
       </div>
 
       <StatusBar

@@ -16,7 +16,7 @@ export default function App() {
 
   return (
     <AppShell
-      rightDrawer={<ChangesDrawer workspace={activeWorkspace} />}
+      rightDrawer={({ width }) => <ChangesDrawer workspace={activeWorkspace} width={width} />}
       usageView={({ summary, onReload, onBack }) => (
         <Suspense
           fallback={
