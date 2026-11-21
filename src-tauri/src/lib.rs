@@ -1,9 +1,11 @@
 pub mod commands;
 pub mod db;
+pub mod editor;
 pub mod error;
 pub mod git;
 pub mod harness;
 pub mod pty;
+pub mod usage;
 pub mod watcher;
 
 use tauri::Manager;
@@ -51,6 +53,11 @@ pub fn run() {
             commands::workspace_cmds::save_workspace_layout,
             commands::workspace_cmds::load_workspace_journal,
             commands::workspace_cmds::mark_boot_clean,
+            commands::editor_cmds::open_in_editor,
+            commands::usage_cmds::get_usage_summary,
+            commands::usage_cmds::list_pricing,
+            commands::usage_cmds::refresh_pricing,
+            commands::usage_cmds::set_pricing_override,
         ])
         .run(tauri::generate_context!())
         .expect("error while running COGMINT");
