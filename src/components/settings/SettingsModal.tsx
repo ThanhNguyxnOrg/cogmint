@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import {
   CheckCircle2,
+  Download,
   KeyRound,
   LogIn,
+  Pencil,
   Plus,
   RefreshCw,
   ShieldAlert,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react'
-import type { HarnessAuthProfileSummary, HarnessSpec } from '../../types/ipc'
+import type { CustomHarnessRecord, HarnessAuthProfileSummary, HarnessSpec } from '../../types/ipc'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore'
 import {
@@ -21,6 +24,27 @@ import {
   upsertCustomHarness,
 } from '../../lib/tauri'
 import { Btn, HarnessGlyph } from '../ui/Primitives'
+import { HarnessLogo, LOGO_PRESET_IDS } from '../ui/HarnessLogo'
+
+const ACCENT_SWATCHES = [
+  '#05DCA3',
+  '#2F6FFF',
+  '#D97757',
+  '#10A37F',
+  '#A855F7',
+  '#F97316',
+  '#38BDF8',
+  '#EC4899',
+  '#FACC15',
+  '#F8FAFC',
+]
+
+const QUICK_CUSTOM_TEMPLATES = [
+  { name: 'Windsurf CLI', command: 'windsurf', args: '', iconId: 'windsurf', color: '#05DCA3' },
+  { name: 'Trae CLI', command: 'trae', args: '', iconId: 'trae', color: '#38BDF8' },
+  { name: 'Crush', command: 'crush', args: '', iconId: '', color: '#EC4899' },
+  { name: 'OpenInterpreter', command: 'interpreter', args: '', iconId: '', color: '#FACC15' },
+]
 
 export type SettingsTabId = 'auth' | 'shells' | 'editor' | 'harnesses'
 
@@ -68,8 +92,15 @@ export function SettingsModal({
   const [customEditorTemplate, setCustomEditorTemplate] = useState(
     editorPreset.kind === 'custom' ? editorPreset.template : 'nvim +{line} {path}',
   )
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newCmd, setNewCmd] = useState('')
+  const [newArgs, setNewArgs] = useState('')
+  const [newAccent, setNewAccent] = useState('#05DCA3')
+  const [newIconId, setNewIconId] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
+  const [importJson, setImportJson] = useState('')
+  const [harnessNotice, setHarnessNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -179,28 +210,120 @@ export function SettingsModal({
     }
   }
 
-  const handleAddHarness = async () => {
+  const resetHarnessForm = () => {
+    setEditingId(null)
+    setNewName('')
+    setNewCmd('')
+    setNewArgs('')
+    setNewAccent('#05DCA3')
+    setNewIconId('')
+  }
+
+  const handleSaveHarness = async () => {
     if (!newName.trim() || !newCmd.trim()) return
-    const id = newName
+    const id =
+      editingId ??
+      newName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+    if (!id) return
+    const defaultArgs = newArgs
       .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
+      .split(/\s+/)
+      .filter(Boolean)
     await upsertCustomHarness({
       id,
       name: newName.trim(),
       command: newCmd.trim(),
-      defaultArgs: [],
-      accentColor: '#05DCA3',
+      defaultArgs,
+      accentColor: newAccent,
       enabled: true,
+      iconId: newIconId.trim() || null,
     })
     setHarnesses(await listHarnesses())
-    setNewName('')
-    setNewCmd('')
+    setHarnessNotice(editingId ? `Updated ${newName.trim()}` : `Added ${newName.trim()}`)
+    resetHarnessForm()
+  }
+
+  const handleEditHarness = (h: HarnessSpec) => {
+    setEditingId(h.id)
+    setNewName(h.name)
+    setNewCmd(h.command)
+    setNewArgs(h.defaultArgs.join(' '))
+    setNewAccent(h.accentColor)
+    setNewIconId(h.iconId ?? '')
+    setHarnessNotice(null)
+  }
+
+  const handleToggleHarnessEnabled = async (h: HarnessSpec) => {
+    await upsertCustomHarness({
+      id: h.id,
+      name: h.name,
+      command: h.command,
+      defaultArgs: h.defaultArgs,
+      accentColor: h.accentColor,
+      enabled: !h.enabled,
+      iconId: h.iconId ?? null,
+    })
+    setHarnesses(await listHarnesses())
   }
 
   const handleDeleteHarness = async (id: string) => {
     await deleteCustomHarness(id)
     setHarnesses(await listHarnesses())
+    if (editingId === id) resetHarnessForm()
+  }
+
+  const handleExportCustomHarnesses = async () => {
+    const customOnly: CustomHarnessRecord[] = harnesses
+      .filter((h) => !h.isBuiltin)
+      .map((h) => ({
+        id: h.id,
+        name: h.name,
+        command: h.command,
+        defaultArgs: h.defaultArgs,
+        accentColor: h.accentColor,
+        enabled: h.enabled,
+        iconId: h.iconId ?? null,
+      }))
+    const json = JSON.stringify(customOnly, null, 2)
+    try {
+      await navigator.clipboard.writeText(json)
+      setHarnessNotice(`Copied ${customOnly.length} custom harness(es) JSON to clipboard`)
+    } catch {
+      setImportJson(json)
+      setImportOpen(true)
+      setHarnessNotice('Ready to copy JSON below')
+    }
+  }
+
+  const handleImportCustomHarnesses = async () => {
+    try {
+      const parsed = JSON.parse(importJson) as CustomHarnessRecord[]
+      if (!Array.isArray(parsed)) throw new Error('Expected JSON array')
+      let count = 0
+      for (const item of parsed) {
+        if (!item?.id || !item?.name || !item?.command) continue
+        await upsertCustomHarness({
+          id: String(item.id),
+          name: String(item.name),
+          command: String(item.command),
+          defaultArgs: Array.isArray(item.defaultArgs) ? item.defaultArgs.map(String) : [],
+          accentColor: item.accentColor || '#05DCA3',
+          enabled: item.enabled !== false,
+          iconId: item.iconId ?? null,
+        })
+        count++
+      }
+      setHarnesses(await listHarnesses())
+      setImportOpen(false)
+      setImportJson('')
+      setHarnessNotice(`Imported ${count} harness(es)`)
+    } catch {
+      setHarnessNotice('Invalid JSON — expected array of { id, name, command, defaultArgs }')
+    }
   }
 
   return (
@@ -602,45 +725,203 @@ export function SettingsModal({
 
             {tab === 'harnesses' && (
               <div className="space-y-3">
-                <div className="flex gap-2">
-                  <input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Custom harness name (e.g. Aider)"
-                    className="flex-1 rounded-md border border-line bg-sunken px-2.5 py-1.5 text-[11px] text-fg"
-                  />
-                  <input
-                    value={newCmd}
-                    onChange={(e) => setNewCmd(e.target.value)}
-                    placeholder="Command (e.g. aider)"
-                    className="w-36 rounded-md border border-line bg-sunken px-2.5 py-1.5 font-mono text-[11px] text-fg"
-                  />
-                  <Btn variant="primary" onClick={() => void handleAddHarness()}>
-                    <Plus className="size-3" />
-                    Add
-                  </Btn>
+                {/* Add / Edit Custom Harness Builder */}
+                <div className="space-y-2.5 rounded-md border border-line bg-sunken/80 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-fg">
+                      {editingId ? `Edit Harness (${editingId})` : 'Add Any Custom CLI Harness'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => void handleExportCustomHarnesses()}
+                        className="inline-flex items-center gap-1 rounded border border-line px-1.5 py-0.5 text-[10px] text-fg-2 hover:bg-hover hover:text-fg cursor-pointer"
+                      >
+                        <Download className="size-2.5" /> Export JSON
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImportOpen((v) => !v)}
+                        className="inline-flex items-center gap-1 rounded border border-line px-1.5 py-0.5 text-[10px] text-fg-2 hover:bg-hover hover:text-fg cursor-pointer"
+                      >
+                        <Upload className="size-2.5" /> Import JSON
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick templates */}
+                  {!editingId && (
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="text-[10px] text-fg-3">Quick add:</span>
+                      {QUICK_CUSTOM_TEMPLATES.map((tpl) => (
+                        <button
+                          key={tpl.command}
+                          type="button"
+                          onClick={() => {
+                            setNewName(tpl.name)
+                            setNewCmd(tpl.command)
+                            setNewArgs(tpl.args)
+                            setNewIconId(tpl.iconId)
+                            setNewAccent(tpl.color)
+                          }}
+                          className="rounded border border-line bg-raised px-1.5 py-0.5 text-[10px] text-fg-2 hover:border-cobalt hover:text-fg cursor-pointer"
+                        >
+                          + {tpl.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Display name (e.g. Crush)"
+                      className="rounded-md border border-line bg-raised px-2.5 py-1.5 text-[11px] text-fg"
+                    />
+                    <input
+                      value={newCmd}
+                      onChange={(e) => setNewCmd(e.target.value)}
+                      placeholder="Command or full path"
+                      className="rounded-md border border-line bg-raised px-2.5 py-1.5 font-mono text-[11px] text-fg"
+                    />
+                    <input
+                      value={newArgs}
+                      onChange={(e) => setNewArgs(e.target.value)}
+                      placeholder="Default args (optional)"
+                      className="rounded-md border border-line bg-raised px-2.5 py-1.5 font-mono text-[11px] text-fg"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-fg-3">Logo:</span>
+                      <select
+                        value={newIconId}
+                        onChange={(e) => setNewIconId(e.target.value)}
+                        className="rounded border border-line bg-raised px-2 py-1 text-[10px] text-fg"
+                      >
+                        <option value="">Default Terminal</option>
+                        {LOGO_PRESET_IDS.map((pid) => (
+                          <option key={pid} value={pid}>
+                            {pid}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="inline-grid size-6 place-items-center rounded border border-line bg-raised">
+                        <HarnessLogo id={newIconId || undefined} accentColor={newAccent} size={14} />
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {ACCENT_SWATCHES.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setNewAccent(c)}
+                          className={`size-4 rounded-full cursor-pointer ${
+                            newAccent === c ? 'ring-2 ring-white ring-offset-1 ring-offset-sunken' : ''
+                          }`}
+                          style={{ background: c }}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {editingId && (
+                        <Btn variant="ghost" onClick={resetHarnessForm}>
+                          Cancel
+                        </Btn>
+                      )}
+                      <Btn variant="primary" onClick={() => void handleSaveHarness()}>
+                        <Plus className="size-3" />
+                        {editingId ? 'Save Changes' : 'Add Harness'}
+                      </Btn>
+                    </div>
+                  </div>
+
+                  {importOpen && (
+                    <div className="space-y-1.5 pt-1">
+                      <textarea
+                        rows={4}
+                        value={importJson}
+                        onChange={(e) => setImportJson(e.target.value)}
+                        placeholder='[{"id":"crush","name":"Crush","command":"crush","defaultArgs":[],"accentColor":"#EC4899","enabled":true}]'
+                        className="w-full rounded border border-line bg-raised p-2 font-mono text-[10px] text-fg"
+                      />
+                      <div className="flex justify-end gap-1.5">
+                        <Btn variant="ghost" onClick={() => setImportOpen(false)}>
+                          Close
+                        </Btn>
+                        <Btn variant="primary" onClick={() => void handleImportCustomHarnesses()}>
+                          Import Harnesses
+                        </Btn>
+                      </div>
+                    </div>
+                  )}
+
+                  {harnessNotice && (
+                    <div className="text-[10px] text-done">{harnessNotice}</div>
+                  )}
                 </div>
 
+                {/* All Built-in (20) & Custom Harnesses */}
                 <div className="space-y-1">
+                  <div className="text-[10px] font-semibold tracking-wider text-fg-3 uppercase">
+                    Catalog ({harnesses.length} harnesses · {harnesses.filter((h) => h.installed).length} installed)
+                  </div>
                   {harnesses.map((h) => (
                     <div
                       key={h.id}
-                      className="flex items-center justify-between rounded border border-line bg-sunken px-2.5 py-1.5"
+                      className={`flex items-center justify-between rounded border border-line bg-sunken px-2.5 py-1.5 ${
+                        !h.enabled ? 'opacity-50' : ''
+                      }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <HarnessGlyph harness={h} size={18} />
-                        <span className="text-[11px] font-medium text-fg">{h.name}</span>
-                        <span className="font-mono text-[10px] text-fg-3">{h.command}</span>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <HarnessGlyph harness={h} size={20} />
+                        <span className="truncate text-[11px] font-medium text-fg">{h.name}</span>
+                        <span className="truncate font-mono text-[10px] text-fg-3">
+                          {h.command}
+                          {h.defaultArgs.length > 0 ? ` ${h.defaultArgs.join(' ')}` : ''}
+                        </span>
+                        {h.installed && (
+                          <span className="rounded bg-done/15 px-1 py-0.5 text-[9px] text-done">
+                            installed
+                          </span>
+                        )}
+                        {!h.isBuiltin && (
+                          <span className="rounded bg-cobalt/15 px-1 py-0.5 text-[9px] text-cobalt">
+                            custom
+                          </span>
+                        )}
                       </div>
-                      {!h.isBuiltin && (
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => void handleDeleteHarness(h.id)}
-                          className="rounded p-1 text-fg-3 hover:text-fail cursor-pointer"
+                          title="Edit command / default args / logo"
+                          onClick={() => handleEditHarness(h)}
+                          className="rounded p-1 text-fg-3 hover:bg-white/[0.06] hover:text-fg cursor-pointer"
                         >
-                          <Trash2 className="size-3" />
+                          <Pencil className="size-3" />
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleHarnessEnabled(h)}
+                          className="rounded border border-line px-1.5 py-0.5 text-[9px] text-fg-2 hover:text-fg cursor-pointer"
+                        >
+                          {h.enabled ? 'On' : 'Off'}
+                        </button>
+                        {!h.isBuiltin && (
+                          <button
+                            type="button"
+                            title="Delete custom harness"
+                            onClick={() => void handleDeleteHarness(h.id)}
+                            className="rounded p-1 text-fg-3 hover:text-fail cursor-pointer"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -77,6 +77,7 @@ export interface HarnessSpec {
   enabled: boolean
   installed: boolean
   resolvedPath: string | null
+  iconId?: string | null
   auth?: HarnessAuthInfo
 }
 
@@ -87,6 +88,7 @@ export interface CustomHarnessRecord {
   defaultArgs: string[]
   accentColor: string
   enabled: boolean
+  iconId?: string | null
 }
 
 export type EditorPreset =

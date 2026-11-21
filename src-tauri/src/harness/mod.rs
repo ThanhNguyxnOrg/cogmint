@@ -32,6 +32,7 @@ pub struct HarnessSpec {
     pub enabled: bool,
     pub installed: bool,
     pub resolved_path: Option<String>,
+    pub icon_id: Option<String>,
     pub auth: HarnessAuthInfo,
 }
 
@@ -56,6 +57,7 @@ fn builtin_entry(
         enabled: true,
         installed: false,
         resolved_path: None,
+        icon_id: Some(id.into()),
         auth: detect_harness_auth(id, None),
     }
 }
@@ -66,14 +68,22 @@ pub fn builtin_harnesses() -> Vec<HarnessSpec> {
         builtin_entry("codex", "Codex CLI", "CX", "codex", vec!["-c".into(), "tui.animations=false".into()], ResumeStrategy::ExactFlag, "#10A37F"),
         builtin_entry("opencode", "OpenCode", "OC", "opencode", vec![], ResumeStrategy::ExactFlag, "#2F6FFF"),
         builtin_entry("gemini", "Gemini CLI", "GM", "gemini", vec![], ResumeStrategy::LatestFlag, "#4285F4"),
+        builtin_entry("cursor", "Cursor Agent", "CU", "cursor-agent", vec![], ResumeStrategy::BareRelaunch, "#F8FAFC"),
         builtin_entry("copilot", "Copilot CLI", "CP", "copilot", vec![], ResumeStrategy::BareRelaunch, "#E2E8F0"),
         builtin_entry("antigravity", "Antigravity", "AG", "agy", vec![], ResumeStrategy::BareRelaunch, "#05DCA3"),
+        builtin_entry("aider", "Aider", "AI", "aider", vec![], ResumeStrategy::BareRelaunch, "#14B8A6"),
+        builtin_entry("cline", "Cline CLI", "CL", "cline", vec![], ResumeStrategy::BareRelaunch, "#A855F7"),
+        builtin_entry("qwen", "Qwen Code", "QW", "qwen", vec![], ResumeStrategy::BareRelaunch, "#6366F1"),
+        builtin_entry("goose", "Goose", "GS", "goose", vec![], ResumeStrategy::BareRelaunch, "#F8FAFC"),
+        builtin_entry("kilo", "Kilo Code", "KL", "kilocode", vec![], ResumeStrategy::BareRelaunch, "#FACC15"),
+        builtin_entry("roocode", "Roo Code", "RC", "roo", vec![], ResumeStrategy::BareRelaunch, "#EC4899"),
         builtin_entry("amp", "Amp", "AM", "amp", vec![], ResumeStrategy::BareRelaunch, "#F97316"),
         builtin_entry("kimi", "Kimi Code", "KM", "kimi", vec![], ResumeStrategy::BareRelaunch, "#38BDF8"),
         builtin_entry("kiro", "Kiro CLI", "KR", "kiro-cli", vec![], ResumeStrategy::BareRelaunch, "#A855F7"),
         builtin_entry("grok", "Grok Build", "GK", "grok", vec![], ResumeStrategy::BareRelaunch, "#F8FAFC"),
         builtin_entry("vibe", "Mistral Vibe", "MV", "vibe", vec![], ResumeStrategy::BareRelaunch, "#FB923C"),
-        builtin_entry("droid", "Droid", "DR", "droid", vec![], ResumeStrategy::BareRelaunch, "#22D3EE"),
+        builtin_entry("droid", "Factory Droid", "DR", "droid", vec![], ResumeStrategy::BareRelaunch, "#EF6F2E"),
+        builtin_entry("amazonq", "Amazon Q", "AQ", "q", vec!["chat".into()], ResumeStrategy::BareRelaunch, "#FF9900"),
     ]
 }
 
@@ -87,6 +97,9 @@ pub fn list_all_harnesses(db: &Database) -> AppResult<Vec<HarnessSpec>> {
             existing.default_args = c.default_args;
             existing.accent_color = c.accent_color;
             existing.enabled = c.enabled;
+            if c.icon_id.is_some() {
+                existing.icon_id = c.icon_id;
+            }
         } else {
             let mono: String = c
                 .name
@@ -108,6 +121,7 @@ pub fn list_all_harnesses(db: &Database) -> AppResult<Vec<HarnessSpec>> {
                 enabled: c.enabled,
                 installed: false,
                 resolved_path: None,
+                icon_id: c.icon_id,
                 auth: detect_harness_auth(&id_clone, None),
             });
         }
@@ -183,22 +197,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_builtin_catalog_contains_all_12_harnesses() {
+    fn test_builtin_catalog_contains_all_20_harnesses() {
         let ids: Vec<_> = builtin_harnesses().into_iter().map(|h| h.id).collect();
-        assert_eq!(ids.len(), 12);
+        assert_eq!(ids.len(), 20);
         for expected in [
             "claude",
             "codex",
             "opencode",
             "gemini",
+            "cursor",
             "copilot",
             "antigravity",
+            "aider",
+            "cline",
+            "qwen",
+            "goose",
+            "kilo",
+            "roocode",
             "amp",
             "kimi",
             "kiro",
             "grok",
             "vibe",
             "droid",
+            "amazonq",
         ] {
             assert!(ids.contains(&expected.to_string()), "missing harness {expected}");
         }

@@ -101,7 +101,8 @@ impl Database {
                 command TEXT NOT NULL,
                 default_args_json TEXT NOT NULL DEFAULT '[]',
                 accent_color TEXT NOT NULL DEFAULT '#64748B',
-                enabled INTEGER NOT NULL DEFAULT 1
+                enabled INTEGER NOT NULL DEFAULT 1,
+                icon_id TEXT
             );
 
             CREATE TABLE IF NOT EXISTS usage_files (
@@ -147,6 +148,8 @@ impl Database {
             );
             ",
         )?;
+        // Non-destructive migration for existing DBs created before icon_id column existed
+        let _ = conn.execute("ALTER TABLE custom_harnesses ADD COLUMN icon_id TEXT", []);
         Ok(())
     }
 }

@@ -461,6 +461,7 @@ export function AppShell({
         onClose={() => setLaunchContext(null)}
         onLaunch={(opts) => void handleLaunchHarness(opts)}
         onOpenAuthSettings={(harnessId) => openSettings('auth', harnessId)}
+        onOpenManageHarnesses={() => openSettings('harnesses')}
         onRunLoginCommand={handleRunLoginCommand}
       />
 

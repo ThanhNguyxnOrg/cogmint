@@ -26,6 +26,7 @@ interface LaunchHarnessModalProps {
     resumeLatest: boolean
   }) => void
   onOpenAuthSettings?: (harnessId: string) => void
+  onOpenManageHarnesses?: () => void
   onRunLoginCommand?: (harness: HarnessSpec) => void
 }
 
@@ -34,6 +35,7 @@ export function LaunchHarnessModal({
   onClose,
   onLaunch,
   onOpenAuthSettings,
+  onOpenManageHarnesses,
   onRunLoginCommand,
 }: LaunchHarnessModalProps) {
   const harnesses = useWorkspaceStore((s) => s.harnesses)
@@ -339,13 +341,29 @@ export function LaunchHarnessModal({
           </label>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
-          <Btn variant="ghost" onClick={onClose}>
-            Cancel
-          </Btn>
-          <Btn variant="primary" onClick={submit} disabled={!activeHarness}>
-            Launch {activeHarness?.name ?? 'Harness'}
-          </Btn>
+        <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3">
+          {onOpenManageHarnesses ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                onOpenManageHarnesses()
+              }}
+              className="text-[11px] font-medium text-cobalt hover:underline cursor-pointer"
+            >
+              + Add / Manage Custom CLIs
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-2">
+            <Btn variant="ghost" onClick={onClose}>
+              Cancel
+            </Btn>
+            <Btn variant="primary" onClick={submit} disabled={!activeHarness}>
+              Launch {activeHarness?.name ?? 'Harness'}
+            </Btn>
+          </div>
         </div>
       </div>
     </div>

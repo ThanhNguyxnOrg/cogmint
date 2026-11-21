@@ -60,6 +60,8 @@ pub struct CustomHarnessRecord {
     pub default_args: Vec<String>,
     pub accent_color: String,
     pub enabled: bool,
+    #[serde(default)]
+    pub icon_id: Option<String>,
 }
 
 impl Database {
@@ -345,14 +347,15 @@ impl Database {
         let conn = self.lock_conn()?;
         let args_json = serde_json::to_string(&rec.default_args).unwrap_or_else(|_| "[]".into());
         conn.execute(
-            "INSERT INTO custom_harnesses (id, name, command, default_args_json, accent_color, enabled)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            "INSERT INTO custom_harnesses (id, name, command, default_args_json, accent_color, enabled, icon_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
              ON CONFLICT(id) DO UPDATE SET
                name = excluded.name,
                command = excluded.command,
                default_args_json = excluded.default_args_json,
                accent_color = excluded.accent_color,
-               enabled = excluded.enabled",
+               enabled = excluded.enabled,
+               icon_id = excluded.icon_id",
             params![
                 rec.id,
                 rec.name,
@@ -360,6 +363,7 @@ impl Database {
                 args_json,
                 rec.accent_color,
                 rec.enabled as i32,
+                rec.icon_id,
             ],
         )?;
         Ok(())
@@ -368,7 +372,7 @@ impl Database {
     pub fn list_custom_harnesses(&self) -> AppResult<Vec<CustomHarnessRecord>> {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
-            "SELECT id, name, command, default_args_json, accent_color, enabled FROM custom_harnesses",
+            "SELECT id, name, command, default_args_json, accent_color, enabled, icon_id FROM custom_harnesses",
         )?;
         let rows = stmt.query_map([], |row| {
             let args_json: String = row.get(3)?;
@@ -379,6 +383,7 @@ impl Database {
                 default_args: serde_json::from_str(&args_json).unwrap_or_default(),
                 accent_color: row.get(4)?,
                 enabled: row.get::<_, i32>(5)? != 0,
+                icon_id: row.get(6)?,
             })
         })?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)

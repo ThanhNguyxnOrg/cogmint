@@ -100,7 +100,7 @@ export function HarnessGlyph({
   harness,
   size = 18,
 }: {
-  harness?: Pick<HarnessSpec, 'id' | 'mono' | 'accentColor'>
+  harness?: Pick<HarnessSpec, 'id' | 'mono' | 'accentColor' | 'iconId'>
   size?: number
 }) {
   const color = harness?.accentColor ?? '#64748B'
@@ -115,7 +115,7 @@ export function HarnessGlyph({
         boxShadow: `inset 0 0 0 1px ${color}2E`,
       }}
     >
-      <HarnessLogo id={harness?.id} accentColor={color} size={iconSize} />
+      <HarnessLogo id={harness?.id} iconId={harness?.iconId} accentColor={color} size={iconSize} />
     </span>
   )
 }

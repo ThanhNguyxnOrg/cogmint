@@ -181,6 +181,75 @@ pub fn builtin_auth_meta(harness_id: &str) -> BuiltinAuthMeta {
             supports_oauth: true,
             auth_notes: "Launch `droid` for interactive Factory sign-in or set FACTORY_API_KEY.",
         },
+        "cursor" => BuiltinAuthMeta {
+            login_command: &["cursor-agent", "login"],
+            api_key_env: Some("CURSOR_API_KEY"),
+            alt_api_key_envs: &[],
+            base_url_env: None,
+            supports_oauth: true,
+            auth_notes: "Run `cursor-agent login` for Cursor OAuth sign-in or set CURSOR_API_KEY.",
+        },
+        "aider" => BuiltinAuthMeta {
+            login_command: &[],
+            api_key_env: Some("OPENROUTER_API_KEY"),
+            alt_api_key_envs: &[
+                "ANTHROPIC_API_KEY",
+                "OPENAI_API_KEY",
+                "GEMINI_API_KEY",
+                "DEEPSEEK_API_KEY",
+            ],
+            base_url_env: Some("OPENAI_API_BASE"),
+            supports_oauth: false,
+            auth_notes: "Set OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY.",
+        },
+        "cline" => BuiltinAuthMeta {
+            login_command: &["cline", "auth"],
+            api_key_env: Some("OPENROUTER_API_KEY"),
+            alt_api_key_envs: &["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"],
+            base_url_env: Some("OPENAI_BASE_URL"),
+            supports_oauth: true,
+            auth_notes: "Run `cline auth` to connect your provider or inject provider API keys.",
+        },
+        "qwen" => BuiltinAuthMeta {
+            login_command: &["qwen"],
+            api_key_env: Some("OPENAI_API_KEY"),
+            alt_api_key_envs: &["DASHSCOPE_API_KEY"],
+            base_url_env: Some("OPENAI_BASE_URL"),
+            supports_oauth: true,
+            auth_notes: "Launch `qwen` for Qwen OAuth sign-in or set OPENAI_API_KEY / DASHSCOPE_API_KEY.",
+        },
+        "goose" => BuiltinAuthMeta {
+            login_command: &["goose", "configure"],
+            api_key_env: Some("ANTHROPIC_API_KEY"),
+            alt_api_key_envs: &["OPENAI_API_KEY", "OPENROUTER_API_KEY", "GOOGLE_API_KEY"],
+            base_url_env: Some("OPENAI_HOST"),
+            supports_oauth: false,
+            auth_notes: "Run `goose configure` or inject ANTHROPIC_API_KEY / OPENAI_API_KEY.",
+        },
+        "kilo" => BuiltinAuthMeta {
+            login_command: &["kilocode", "auth"],
+            api_key_env: Some("KILOCODE_API_KEY"),
+            alt_api_key_envs: &["OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+            base_url_env: None,
+            supports_oauth: true,
+            auth_notes: "Run `kilocode auth` or set KILOCODE_API_KEY / OPENROUTER_API_KEY.",
+        },
+        "roocode" => BuiltinAuthMeta {
+            login_command: &["roo", "auth"],
+            api_key_env: Some("OPENROUTER_API_KEY"),
+            alt_api_key_envs: &["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+            base_url_env: Some("OPENAI_BASE_URL"),
+            supports_oauth: true,
+            auth_notes: "Run `roo auth` or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY.",
+        },
+        "amazonq" => BuiltinAuthMeta {
+            login_command: &["q", "login"],
+            api_key_env: None,
+            alt_api_key_envs: &["AWS_ACCESS_KEY_ID", "AWS_PROFILE"],
+            base_url_env: None,
+            supports_oauth: true,
+            auth_notes: "Run `q login` to authenticate with AWS Builder ID or IAM Identity Center.",
+        },
         _ => BuiltinAuthMeta {
             login_command: &[],
             api_key_env: None,
@@ -347,6 +416,32 @@ fn local_oauth_credential_detail(harness_id: &str, home_dir: &Path) -> Option<St
                 || non_empty_file(&home_dir.join(".factory/credentials.json"))
             {
                 return Some("~/.factory auth".into());
+            }
+            None
+        }
+        "cursor" => {
+            if non_empty_file(&home_dir.join(".cursor/cli-config.json"))
+                || non_empty_file(&home_dir.join(".cursor/auth.json"))
+            {
+                return Some("~/.cursor auth".into());
+            }
+            None
+        }
+        "qwen" => {
+            if non_empty_file(&home_dir.join(".qwen/oauth_creds.json")) {
+                return Some("~/.qwen/oauth_creds.json".into());
+            }
+            None
+        }
+        "goose" => {
+            if non_empty_file(&home_dir.join(".config/goose/config.yaml")) {
+                return Some("~/.config/goose/config.yaml".into());
+            }
+            None
+        }
+        "amazonq" => {
+            if non_empty_dir(&home_dir.join(".aws/sso/cache")) {
+                return Some("AWS Builder ID / SSO".into());
             }
             None
         }
