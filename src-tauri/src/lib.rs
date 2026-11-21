@@ -1,8 +1,10 @@
 pub mod commands;
 pub mod db;
 pub mod error;
+pub mod git;
 pub mod harness;
 pub mod pty;
+pub mod watcher;
 
 use tauri::Manager;
 
@@ -21,6 +23,7 @@ pub fn run() {
             let database = db::Database::open(&db_path).expect("failed to initialize SQLite DB");
             app.manage(database);
             app.manage(pty::PtyManager::new());
+            app.manage(watcher::WorkspaceWatcher::new());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -34,6 +37,20 @@ pub fn run() {
             commands::harness_cmds::upsert_custom_harness,
             commands::harness_cmds::delete_custom_harness,
             commands::harness_cmds::resolve_resume_session,
+            commands::git_cmds::get_git_status,
+            commands::git_cmds::get_file_diff,
+            commands::git_cmds::stage_files,
+            commands::git_cmds::unstage_files,
+            commands::git_cmds::commit_changes,
+            commands::git_cmds::get_merge_preview,
+            commands::workspace_cmds::register_project,
+            commands::workspace_cmds::list_workspaces,
+            commands::workspace_cmds::create_worktree,
+            commands::workspace_cmds::remove_worktree,
+            commands::workspace_cmds::watch_workspace,
+            commands::workspace_cmds::save_workspace_layout,
+            commands::workspace_cmds::load_workspace_journal,
+            commands::workspace_cmds::mark_boot_clean,
         ])
         .run(tauri::generate_context!())
         .expect("error while running COGMINT");
