@@ -87,6 +87,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       unavailable: missing.has(ws.path),
     }))
 
+    // Crash-loop guard: in safeMode, skip auto-restoring layouts and panes
+    if (snapshot.bootStatus.safeMode) {
+      set({
+        safeMode: true,
+        projects: snapshot.projects,
+        workspaces,
+        panesById: {},
+        treesByWorkspaceId: {},
+        activeWorkspaceId: null,
+        focusedLeafId: null,
+      })
+      return
+    }
+
     const panesById: Record<string, PaneRuntimeState> = {}
     for (const p of snapshot.panes) {
       // Lazy / dormant restore: every restored pane starts hibernated
@@ -302,11 +316,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const pane = state.panesById[paneId]
       if (!pane) return state
       const tree = state.treesByWorkspaceId[state.activeWorkspaceId ?? ''] ?? null
+      const findActiveInLeaf = (node: SplitNode | null, targetLeafId: string): string | null => {
+        if (!node) return null
+        if (node.type === 'leaf') return node.id === targetLeafId ? node.activePaneId : null
+        return findActiveInLeaf(node.first, targetLeafId) ?? findActiveInLeaf(node.second, targetLeafId)
+      }
       const isFocusedPane =
         pane.workspaceId === state.activeWorkspaceId &&
         tree !== null &&
         state.focusedLeafId !== null &&
-        findLeafContainingPane(tree, paneId) === state.focusedLeafId
+        findLeafContainingPane(tree, paneId) === state.focusedLeafId &&
+        findActiveInLeaf(tree, state.focusedLeafId) === paneId
       const shouldFlagUnread =
         !isFocusedPane &&
         (nextState === 'needs_attention' || nextState === 'failed' || nextState === 'done')

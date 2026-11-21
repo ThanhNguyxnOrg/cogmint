@@ -92,9 +92,26 @@ pub fn decode_utf8_chunk(carry: &mut Vec<u8>, incoming: &[u8]) -> String {
 }
 
 struct PtySession {
+    cwd: std::path::PathBuf,
+    child_pid: Option<u32>,
     master: Box<dyn MasterPty + Send>,
     writer: Box<dyn Write + Send>,
     child: Box<dyn Child + Send + Sync>,
+}
+
+fn terminate_process_tree(child: &mut Box<dyn Child + Send + Sync>, pid: Option<u32>) {
+    #[cfg(target_os = "windows")]
+    if let Some(id) = pid {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let _ = std::process::Command::new("taskkill")
+            .args(["/T", "/F", "/PID", &id.to_string()])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = pid;
+    let _ = child.kill();
 }
 
 #[derive(Default)]
@@ -154,6 +171,8 @@ impl PtyManager {
             .map_err(|e| AppError::Pty(format!("Failed to take PTY writer: {e}")))?;
 
         let pane_id = req.pane_id.clone();
+        let child_pid = child.process_id();
+        let cwd_buf = std::path::PathBuf::from(&req.cwd);
         {
             let mut map = self
                 .sessions
@@ -162,6 +181,8 @@ impl PtyManager {
             map.insert(
                 pane_id.clone(),
                 PtySession {
+                    cwd: cwd_buf,
+                    child_pid,
                     master: pair.master,
                     writer,
                     child,
@@ -265,16 +286,34 @@ impl PtyManager {
             .lock()
             .map_err(|e| AppError::Pty(format!("PTY mutex poisoned: {e}")))?;
         if let Some(mut sess) = map.remove(pane_id) {
-            let _ = sess.child.kill();
+            let pid = sess.child_pid;
+            terminate_process_tree(&mut sess.child, pid);
             drop(sess);
         }
         Ok(())
     }
 
+    pub fn kill_in_cwd(&self, dir: &std::path::Path) {
+        if let Ok(mut map) = self.sessions.lock() {
+            let target_ids: Vec<String> = map
+                .iter()
+                .filter(|(_, s)| s.cwd == dir || s.cwd.starts_with(dir))
+                .map(|(id, _)| id.clone())
+                .collect();
+            for id in target_ids {
+                if let Some(mut sess) = map.remove(&id) {
+                    let pid = sess.child_pid;
+                    terminate_process_tree(&mut sess.child, pid);
+                }
+            }
+        }
+    }
+
     pub fn kill_all(&self) {
         if let Ok(mut map) = self.sessions.lock() {
             for (_, mut sess) in map.drain() {
-                let _ = sess.child.kill();
+                let pid = sess.child_pid;
+                terminate_process_tree(&mut sess.child, pid);
             }
         }
     }

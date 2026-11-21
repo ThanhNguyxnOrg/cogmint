@@ -87,14 +87,13 @@ impl Database {
         Ok(())
     }
 
-    pub fn upsert_project(&self, project: &ProjectRecord) -> AppResult<()> {
+    pub fn upsert_project(&self, project: &ProjectRecord) -> AppResult<ProjectRecord> {
         let conn = self.lock_conn()?;
         conn.execute(
             "INSERT INTO projects (id, name, root_path, is_git_repo, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5)
-             ON CONFLICT(id) DO UPDATE SET
+             ON CONFLICT(root_path) DO UPDATE SET
                name = excluded.name,
-               root_path = excluded.root_path,
                is_git_repo = excluded.is_git_repo",
             params![
                 project.id,
@@ -104,7 +103,20 @@ impl Database {
                 project.created_at,
             ],
         )?;
-        Ok(())
+        let saved = conn.query_row(
+            "SELECT id, name, root_path, is_git_repo, created_at FROM projects WHERE root_path = ?1",
+            params![project.root_path],
+            |row| {
+                Ok(ProjectRecord {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    root_path: row.get(2)?,
+                    is_git_repo: row.get::<_, i32>(3)? != 0,
+                    created_at: row.get(4)?,
+                })
+            },
+        )?;
+        Ok(saved)
     }
 
     pub fn list_projects(&self) -> AppResult<Vec<ProjectRecord>> {
@@ -130,14 +142,14 @@ impl Database {
         Ok(())
     }
 
-    pub fn upsert_workspace(&self, ws: &WorkspaceRecord) -> AppResult<()> {
+    pub fn upsert_workspace(&self, ws: &WorkspaceRecord) -> AppResult<WorkspaceRecord> {
         let conn = self.lock_conn()?;
         conn.execute(
             "INSERT INTO workspaces (id, project_id, name, path, branch, is_git_repo, is_worktree, shell_profile)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-             ON CONFLICT(id) DO UPDATE SET
+             ON CONFLICT(path) DO UPDATE SET
+               project_id = excluded.project_id,
                name = excluded.name,
-               path = excluded.path,
                branch = excluded.branch,
                is_git_repo = excluded.is_git_repo,
                is_worktree = excluded.is_worktree,
@@ -153,7 +165,24 @@ impl Database {
                 ws.shell_profile,
             ],
         )?;
-        Ok(())
+        let saved = conn.query_row(
+            "SELECT id, project_id, name, path, branch, is_git_repo, is_worktree, shell_profile
+             FROM workspaces WHERE path = ?1",
+            params![ws.path],
+            |row| {
+                Ok(WorkspaceRecord {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    name: row.get(2)?,
+                    path: row.get(3)?,
+                    branch: row.get(4)?,
+                    is_git_repo: row.get::<_, i32>(5)? != 0,
+                    is_worktree: row.get::<_, i32>(6)? != 0,
+                    shell_profile: row.get(7)?,
+                })
+            },
+        )?;
+        Ok(saved)
     }
 
     pub fn list_workspaces(&self) -> AppResult<Vec<WorkspaceRecord>> {
@@ -259,6 +288,54 @@ impl Database {
     pub fn delete_pane(&self, pane_id: &str) -> AppResult<()> {
         let conn = self.lock_conn()?;
         conn.execute("DELETE FROM panes WHERE id = ?1", params![pane_id])?;
+        Ok(())
+    }
+
+    pub fn sync_workspace_panes(
+        &self,
+        workspace_id: &str,
+        tree_json: Option<&str>,
+        panes: &[PaneJournalRecord],
+    ) -> AppResult<()> {
+        let mut conn = self.lock_conn()?;
+        let tx = conn.transaction()?;
+        match tree_json {
+            Some(tree) => {
+                tx.execute(
+                    "INSERT INTO layout_trees (workspace_id, tree_json) VALUES (?1, ?2)
+                     ON CONFLICT(workspace_id) DO UPDATE SET tree_json = excluded.tree_json",
+                    params![workspace_id, tree],
+                )?;
+            }
+            None => {
+                tx.execute(
+                    "DELETE FROM layout_trees WHERE workspace_id = ?1",
+                    params![workspace_id],
+                )?;
+            }
+        }
+        tx.execute(
+            "DELETE FROM panes WHERE workspace_id = ?1",
+            params![workspace_id],
+        )?;
+        for pane in panes {
+            let args_json = serde_json::to_string(&pane.custom_args).unwrap_or_else(|_| "[]".into());
+            tx.execute(
+                "INSERT INTO panes (id, workspace_id, harness_id, title, pinned, resume_session_id, last_summary, custom_args_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    pane.id,
+                    workspace_id,
+                    pane.harness_id,
+                    pane.title,
+                    pane.pinned as i32,
+                    pane.resume_session_id,
+                    pane.last_summary,
+                    args_json,
+                ],
+            )?;
+        }
+        tx.commit()?;
         Ok(())
     }
 
@@ -383,5 +460,30 @@ mod tests {
             db.load_layout_tree("ws-1").unwrap().as_deref(),
             Some(r#"{"type":"leaf","id":"l1","paneIds":["pane-1"]}"#)
         );
+    }
+
+    #[test]
+    fn test_re_registering_same_project_path_returns_existing_id() {
+        let db = Database::open_in_memory().unwrap();
+        let first = db
+            .upsert_project(&ProjectRecord {
+                id: "id-1".into(),
+                name: "cogmint".into(),
+                root_path: "/repos/cogmint".into(),
+                is_git_repo: true,
+                created_at: 100,
+            })
+            .unwrap();
+        let second = db
+            .upsert_project(&ProjectRecord {
+                id: "id-2-new-uuid".into(),
+                name: "cogmint".into(),
+                root_path: "/repos/cogmint".into(),
+                is_git_repo: true,
+                created_at: 200,
+            })
+            .unwrap();
+        assert_eq!(first.id, second.id);
+        assert_eq!(db.list_projects().unwrap().len(), 1);
     }
 }

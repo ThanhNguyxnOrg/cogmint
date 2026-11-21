@@ -23,6 +23,7 @@ import {
   registerProject,
   resolveResumeSession,
   saveWorkspaceLayout,
+  unwatchWorkspace,
   watchWorkspace,
 } from '../../lib/tauri'
 import { isModKey } from '../../lib/keybindings'
@@ -103,28 +104,33 @@ export function AppShell({
       setWslDistros(distros)
       if (journal) {
         restoreFromJournal(journal)
-        void markBootClean()
       }
       void reloadUsage()
     })()
+    const cleanTimer = setTimeout(() => {
+      void markBootClean()
+    }, 2000)
     return () => {
       active = false
+      clearTimeout(cleanTimer)
     }
   }, [reloadUsage, restoreFromJournal, setAvailableShells, setHarnesses, setWslDistros])
 
-  // Watch active workspace directory for Git changes
+  // Watch active workspace directory for Git changes and unwatch on switch
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null
   useEffect(() => {
-    if (activeWorkspace && !activeWorkspace.unavailable) {
-      void watchWorkspace(activeWorkspace.id, activeWorkspace.path)
+    if (!activeWorkspace || activeWorkspace.unavailable) return
+    const wsId = activeWorkspace.id
+    void watchWorkspace(wsId, activeWorkspace.path)
+    return () => {
+      void unwatchWorkspace(wsId)
     }
   }, [activeWorkspace])
 
-  // Persist layout & panes to SQLite journal whenever active workspace tree changes
+  // Persist layout & panes to SQLite journal whenever active workspace tree/panes change
   useEffect(() => {
     if (!activeWorkspaceId) return
-    const tree = treesByWorkspaceId[activeWorkspaceId]
-    if (!tree) return
+    const tree = treesByWorkspaceId[activeWorkspaceId] ?? null
     const wsPanes = Object.values(panesById)
       .filter((p) => p.workspaceId === activeWorkspaceId)
       .map((p) => ({
@@ -137,10 +143,10 @@ export function AppShell({
         lastSummary: p.lastSummary,
         customArgs: p.customArgs,
       }))
-    void saveWorkspaceLayout(activeWorkspaceId, JSON.stringify(tree), wsPanes)
+    void saveWorkspaceLayout(activeWorkspaceId, tree ? JSON.stringify(tree) : null, wsPanes)
   }, [activeWorkspaceId, panesById, treesByWorkspaceId])
 
-  // 3-OS global keyboard shortcuts
+  // 3-OS global keyboard shortcuts (capture phase so xterm focus does not swallow app shortcuts)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!isModKey(e)) return
@@ -151,6 +157,12 @@ export function AppShell({
       } else if (key === 't' && activeWorkspaceId) {
         e.preventDefault()
         setLaunchContext({ workspaceId: activeWorkspaceId })
+      } else if (key === 'd' && activeWorkspaceId) {
+        e.preventDefault()
+        setLaunchContext({
+          workspaceId: activeWorkspaceId,
+          splitDirection: e.shiftKey ? 'horizontal' : 'vertical',
+        })
       } else if (e.shiftKey && key === 'a') {
         e.preventDefault()
         setView('workspace')
@@ -166,8 +178,8 @@ export function AppShell({
         setSettingsOpen(true)
       }
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [activeWorkspaceId, jumpToNextAttention])
 
   const handleAddProject = async () => {
@@ -219,10 +231,7 @@ export function AppShell({
 
   const activeProject = projects.find((p) => p.id === activeWorkspace?.projectId)
   const todayStr = new Date().toISOString().slice(0, 10)
-  const todaySpend =
-    usageSummary?.byDay.find((d) => d.date === todayStr)?.costUsd ??
-    usageSummary?.totalCostUsd ??
-    0
+  const todaySpend = usageSummary?.byDay.find((d) => d.date === todayStr)?.costUsd ?? 0
   const todayTokens =
     (usageSummary?.totalInputTokens ?? 0) +
     (usageSummary?.totalOutputTokens ?? 0) +
@@ -373,20 +382,21 @@ export function AppShell({
           onLaunchAgent={(workspaceId) => setLaunchContext({ workspaceId })}
         />
 
-        {view === 'usage' && usageView ? (
-          usageView({
-            summary: usageSummary,
-            onReload: () => void reloadUsage(),
-            onBack: () => setView('workspace'),
-          })
-        ) : (
+        <div className={view === 'usage' ? 'hidden' : 'flex min-h-0 min-w-0 flex-1'}>
           <SplitStage
             workspace={activeWorkspace}
             onLaunchAgent={(workspaceId, splitDirection, leafId) =>
               setLaunchContext({ workspaceId, splitDirection, leafId })
             }
           />
-        )}
+        </div>
+
+        {view === 'usage' &&
+          usageView?.({
+            summary: usageSummary,
+            onReload: () => void reloadUsage(),
+            onBack: () => setView('workspace'),
+          })}
 
         {view === 'workspace' && drawerOpen && rightDrawer}
       </div>

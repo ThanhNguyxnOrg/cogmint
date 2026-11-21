@@ -7,7 +7,6 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import type { HarnessSpec } from '../../types/ipc'
 import type { PaneRuntimeState, WorkspaceRecord } from '../../types/workspace'
 import {
-  killPty,
   notifyNative,
   openInEditor,
   resizePty,
@@ -25,16 +24,26 @@ interface TerminalPaneProps {
   harness?: HarnessSpec
 }
 
+function resolveLinkPath(workspacePath: string, linkPath: string): string {
+  if (/^[A-Za-z]:[\\/]/.test(linkPath) || linkPath.startsWith('/')) {
+    return linkPath
+  }
+  const sep = workspacePath.includes('\\') ? '\\' : '/'
+  const cleanBase = workspacePath.replace(/[\\/]+$/, '')
+  const cleanRel = linkPath.replace(/^\.[\\/]/, '')
+  return `${cleanBase}${sep}${cleanRel}`
+}
+
 export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const termRef = useRef<Terminal | null>(null)
   const spawnedRef = useRef(false)
+  const startFreshRef = useRef(false)
 
   const updatePaneAttention = useWorkspaceStore((s) => s.updatePaneAttention)
-  const editorPreset = useSettingsStore((s) => s.editorPreset)
   const defaultShellId = useSettingsStore((s) => s.defaultShellId)
 
-  const activateSession = async (fresh: boolean) => {
+  const spawnInMountedTerminal = async (fresh: boolean) => {
     if (spawnedRef.current) return
     spawnedRef.current = true
     updatePaneAttention(pane.id, 'working', pane.latestWords)
@@ -50,38 +59,51 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
     const cols = termRef.current?.cols ?? 100
     const rows = termRef.current?.rows ?? 30
 
-    await spawnPanePty(
-      {
-        paneId: pane.id,
-        cwd: workspace.path,
-        cols,
-        rows,
-        program: harness?.command ?? null,
-        args,
-        shellProfile: workspace.shellProfile ?? defaultShellId,
-      },
-      (evt) => {
-        if (evt.event === 'output') {
-          termRef.current?.write(evt.data.data)
-        } else if (evt.event === 'attention') {
-          updatePaneAttention(pane.id, evt.data.state, evt.data.latestWords)
-          if (
-            typeof document !== 'undefined' &&
-            !document.hasFocus() &&
-            (evt.data.state === 'needs_attention' || evt.data.state === 'failed')
-          ) {
-            void notifyNative(
-              `${pane.title} (${workspace.branch ?? workspace.name})`,
-              evt.data.latestWords ?? `Agent ${evt.data.state.replace('_', ' ')}`,
-            )
+    try {
+      await spawnPanePty(
+        {
+          paneId: pane.id,
+          cwd: workspace.path,
+          cols,
+          rows,
+          program: harness?.command ?? null,
+          args,
+          shellProfile: workspace.shellProfile ?? defaultShellId,
+        },
+        (evt) => {
+          if (evt.event === 'output') {
+            termRef.current?.write(evt.data.data)
+          } else if (evt.event === 'attention') {
+            updatePaneAttention(pane.id, evt.data.state, evt.data.latestWords)
+            if (
+              typeof document !== 'undefined' &&
+              !document.hasFocus() &&
+              (evt.data.state === 'needs_attention' || evt.data.state === 'failed')
+            ) {
+              void notifyNative(
+                `${pane.title} (${workspace.branch ?? workspace.name})`,
+                evt.data.latestWords ?? `Agent ${evt.data.state.replace('_', ' ')}`,
+              )
+            }
+          } else if (evt.event === 'exit') {
+            spawnedRef.current = false
+            const next = evt.data.exitCode === 0 || evt.data.exitCode === null ? 'done' : 'failed'
+            updatePaneAttention(pane.id, next)
           }
-        } else if (evt.event === 'exit') {
-          spawnedRef.current = false
-          const next = evt.data.exitCode === 0 || evt.data.exitCode === null ? 'done' : 'failed'
-          updatePaneAttention(pane.id, next)
-        }
-      },
-    )
+        },
+      )
+    } catch (err) {
+      spawnedRef.current = false
+      const msg = err instanceof Error ? err.message : String(err)
+      termRef.current?.writeln(`\r\n\x1b[31m[COGMINT] Failed to launch harness: ${msg}\x1b[0m`)
+      updatePaneAttention(pane.id, 'failed', msg)
+    }
+  }
+
+  const requestWake = (fresh: boolean) => {
+    startFreshRef.current = fresh
+    // Transition out of hibernated first so xterm mounts before spawnPanePty runs (zero lost output)
+    updatePaneAttention(pane.id, 'idle', pane.latestWords)
   }
 
   useEffect(() => {
@@ -128,8 +150,11 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
               start: { x: m.startIndex + 1, y: lineNumber },
               end: { x: m.endIndex, y: lineNumber },
             },
-            activate: (_event, _text) => {
-              void openInEditor(editorPreset, m.path, m.line, m.col)
+            activate: (event, _text) => {
+              if (!event.metaKey && !event.ctrlKey) return
+              const preset = useSettingsStore.getState().editorPreset
+              const resolved = resolveLinkPath(workspace.path, m.path)
+              void openInEditor(preset, resolved, m.line, m.col)
             },
           })),
         )
@@ -152,17 +177,14 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
         : null
     ro?.observe(el)
 
-    void activateSession(false)
+    void spawnInMountedTerminal(startFreshRef.current)
 
     return () => {
       onDataDisp.dispose()
       ro?.disconnect()
       term.dispose()
       termRef.current = null
-      if (spawnedRef.current) {
-        spawnedRef.current = false
-        void killPty(pane.id)
-      }
+      // Do NOT kill PTY on view unmount — explicit pane close / app exit owns PTY termination
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pane.id, pane.attentionState === 'hibernated'])
@@ -174,7 +196,7 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            void activateSession(false)
+            requestWake(false)
           }
         }}
         className="flex h-full w-full flex-col items-center justify-center bg-sunken p-6 text-center focus:outline-none"
@@ -201,11 +223,11 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
           )}
 
           <div className="mt-4 flex items-center justify-center gap-2">
-            <Btn variant="primary" onClick={() => void activateSession(false)}>
+            <Btn variant="primary" onClick={() => requestWake(false)}>
               <Play className="size-3" />
               Resume Session
             </Btn>
-            <Btn variant="secondary" onClick={() => void activateSession(true)}>
+            <Btn variant="secondary" onClick={() => requestWake(true)}>
               <RotateCcw className="size-3" />
               Start Fresh
             </Btn>

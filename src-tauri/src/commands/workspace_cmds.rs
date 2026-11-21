@@ -5,6 +5,7 @@ use crate::git::worktree::{
     create_worktree as git_create_worktree, list_worktrees, remove_worktree as git_remove_worktree,
     CreateWorktreeRequest, WorktreeInfo, WorktreeRecoveryReport,
 };
+use crate::pty::PtyManager;
 use crate::watcher::WorkspaceWatcher;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -49,21 +50,20 @@ pub fn register_project(
         .unwrap_or("project")
         .to_string();
     let git_repo = is_git_repo(&path);
-    let project = ProjectRecord {
+    let project = db.upsert_project(&ProjectRecord {
         id: Uuid::new_v4().to_string(),
         name: name.clone(),
         root_path: root_path.clone(),
         is_git_repo: git_repo,
         created_at: chrono::Utc::now().timestamp_millis(),
-    };
-    db.upsert_project(&project)?;
+    })?;
 
     let mut created_workspaces = Vec::new();
     if git_repo {
         let wts = list_worktrees(&path).unwrap_or_default();
         for wt in wts {
             let ws_name = wt.branch.clone().unwrap_or_else(|| name.clone());
-            let ws = WorkspaceRecord {
+            let ws = db.upsert_workspace(&WorkspaceRecord {
                 id: Uuid::new_v4().to_string(),
                 project_id: project.id.clone(),
                 name: ws_name,
@@ -72,12 +72,11 @@ pub fn register_project(
                 is_git_repo: true,
                 is_worktree: !wt.is_main,
                 shell_profile: None,
-            };
-            db.upsert_workspace(&ws)?;
+            })?;
             created_workspaces.push(ws);
         }
     } else {
-        let ws = WorkspaceRecord {
+        let ws = db.upsert_workspace(&WorkspaceRecord {
             id: Uuid::new_v4().to_string(),
             project_id: project.id.clone(),
             name,
@@ -86,8 +85,7 @@ pub fn register_project(
             is_git_repo: false,
             is_worktree: false,
             shell_profile: None,
-        };
-        db.upsert_workspace(&ws)?;
+        })?;
         created_workspaces.push(ws);
     }
 
@@ -107,7 +105,7 @@ pub fn create_worktree(
 ) -> AppResult<CreateWorktreeResponse> {
     match git_create_worktree(&request) {
         Ok(wt) => {
-            let ws = WorkspaceRecord {
+            let ws = db.upsert_workspace(&WorkspaceRecord {
                 id: Uuid::new_v4().to_string(),
                 project_id,
                 name: wt.branch.clone().unwrap_or_else(|| request.branch.clone()),
@@ -116,8 +114,7 @@ pub fn create_worktree(
                 is_git_repo: true,
                 is_worktree: true,
                 shell_profile: None,
-            };
-            db.upsert_workspace(&ws)?;
+            })?;
             Ok(CreateWorktreeResponse {
                 ok: true,
                 workspace: Some(ws),
@@ -138,16 +135,26 @@ pub fn create_worktree(
 pub fn remove_worktree(
     db: State<'_, Database>,
     watcher: State<'_, WorkspaceWatcher>,
+    pty: State<'_, PtyManager>,
     workspace_id: String,
     repo_root: String,
     worktree_path: String,
     force: bool,
 ) -> AppResult<()> {
-    // Drop FS watcher handle first so Windows never hits EBUSY / sharing violation
+    let wt_path = PathBuf::from(&worktree_path);
+    // Kill PTYs and drop FS watcher handle first so Windows never hits EBUSY / sharing violation
+    pty.kill_in_cwd(&wt_path);
     watcher.unwatch(&workspace_id);
-    git_remove_worktree(&PathBuf::from(repo_root), &PathBuf::from(worktree_path), force)?;
+    if wt_path.exists() {
+        git_remove_worktree(&PathBuf::from(repo_root), &wt_path, force)?;
+    }
     db.delete_workspace(&workspace_id)?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn unwatch_workspace(watcher: State<'_, WorkspaceWatcher>, workspace_id: String) {
+    watcher.unwatch(&workspace_id);
 }
 
 #[tauri::command]
@@ -170,14 +177,10 @@ pub fn watch_workspace(
 pub fn save_workspace_layout(
     db: State<'_, Database>,
     workspace_id: String,
-    tree_json: String,
+    tree_json: Option<String>,
     panes: Vec<PaneJournalRecord>,
 ) -> AppResult<()> {
-    db.save_layout_tree(&workspace_id, &tree_json)?;
-    for pane in &panes {
-        db.upsert_pane(pane)?;
-    }
-    Ok(())
+    db.sync_workspace_panes(&workspace_id, tree_json.as_deref(), &panes)
 }
 
 #[tauri::command]

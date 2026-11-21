@@ -15,6 +15,11 @@ pub struct MergePreview {
 
 /// Read-only merge dry-run using `git merge-tree --write-tree` (never mutates index or working tree).
 pub fn preview_merge(dir: &Path, base_branch: &str) -> AppResult<MergePreview> {
+    if base_branch.trim().is_empty() || base_branch.trim().starts_with('-') {
+        return Err(crate::error::AppError::InvalidInput(
+            "Invalid base branch name".into(),
+        ));
+    }
     let counts = git_command(
         dir,
         &[

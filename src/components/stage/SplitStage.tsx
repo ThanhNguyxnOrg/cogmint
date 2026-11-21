@@ -89,18 +89,25 @@ function SplitTreeView({
         onLaunchTab={() => onLaunchAgent(workspace.id, undefined, node.id)}
         onSplit={(dir) => onLaunchAgent(workspace.id, dir, node.id)}
       />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {activePane ? (
-          <TerminalPane
-            key={activePane.id}
-            pane={activePane}
-            workspace={workspace}
-            harness={harnessesById[activePane.harnessId]}
-          />
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {leafPanes.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-fg-3">No active pane</div>
         ) : (
-          <div className="flex h-full items-center justify-center text-fg-3">
-            No active pane
-          </div>
+          leafPanes.map((pane) => {
+            const isVisible = pane.id === activePane?.id
+            return (
+              <div
+                key={pane.id}
+                className={isVisible ? 'h-full w-full' : 'hidden h-full w-full'}
+              >
+                <TerminalPane
+                  pane={pane}
+                  workspace={workspace}
+                  harness={harnessesById[pane.harnessId]}
+                />
+              </div>
+            )
+          })
         )}
       </div>
     </div>

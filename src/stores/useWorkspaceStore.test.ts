@@ -104,3 +104,44 @@ test('jumpToNextAttention focuses highest-priority needs_attention or failed pan
   expect(jumped).toBe('p-attn')
   expect(useWorkspaceStore.getState().panesById['p-attn']?.unread).toBe(false)
 })
+
+test('test_safe_mode_skips_auto_restoring_panes_and_layouts', () => {
+  useWorkspaceStore.getState().restoreFromJournal({
+    bootStatus: { safeMode: true, recentUncleanBoots: 2 },
+    projects: [
+      { id: 'proj-1', name: 'cogmint', rootPath: '/repos/cogmint', isGitRepo: true, createdAt: 1 },
+    ],
+    workspaces: [
+      {
+        id: 'ws-1',
+        projectId: 'proj-1',
+        name: 'main',
+        path: '/repos/cogmint',
+        branch: 'main',
+        isGitRepo: true,
+        isWorktree: false,
+        shellProfile: null,
+      },
+    ],
+    panes: [
+      {
+        id: 'p-1',
+        workspaceId: 'ws-1',
+        harnessId: 'claude',
+        title: 'Claude Code',
+        pinned: false,
+        resumeSessionId: null,
+        lastSummary: null,
+        customArgs: [],
+      },
+    ],
+    layouts: { 'ws-1': '{"type":"leaf","id":"l1","paneIds":["p-1"],"activePaneId":"p-1"}' },
+    missingPaths: [],
+  })
+
+  const state = useWorkspaceStore.getState()
+  expect(state.safeMode).toBe(true)
+  expect(state.activeWorkspaceId).toBeNull()
+  expect(Object.keys(state.panesById)).toHaveLength(0)
+  expect(Object.keys(state.treesByWorkspaceId)).toHaveLength(0)
+})

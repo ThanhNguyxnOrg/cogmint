@@ -117,7 +117,11 @@ pub fn create_worktree(
 ) -> Result<WorktreeInfo, (AppError, WorktreeRecoveryReport)> {
     let repo_root = Path::new(&req.repo_root);
     let branch = req.branch.trim();
-    if branch.is_empty() || branch.contains("..") || branch.contains(' ') {
+    if branch.is_empty()
+        || branch.starts_with('-')
+        || branch.contains("..")
+        || branch.contains(' ')
+    {
         let report = WorktreeRecoveryReport {
             branch_exists: false,
             dir_exists: false,
@@ -125,6 +129,17 @@ pub fn create_worktree(
             message: "Branch name is invalid".into(),
         };
         return Err((AppError::InvalidInput("Invalid branch name".into()), report));
+    }
+    if let Some(base) = req.base_ref.as_deref() {
+        if base.trim().starts_with('-') {
+            let report = WorktreeRecoveryReport {
+                branch_exists: false,
+                dir_exists: false,
+                registered: false,
+                message: "Base ref cannot start with '-'".into(),
+            };
+            return Err((AppError::InvalidInput("Invalid base ref".into()), report));
+        }
     }
 
     let target = req

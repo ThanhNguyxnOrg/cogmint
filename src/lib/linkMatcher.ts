@@ -9,10 +9,10 @@ export interface MatchedFileLink {
 
 // Matches:
 // 1. Quoted Windows or POSIX paths with spaces: "C:\Users\My Name\file.ts:42:10"
-// 2. Unquoted Windows paths: C:\foo\bar.rs:12:3
-// 3. Unquoted POSIX absolute or relative paths: ./src/lib/splitTree.ts:88 or /home/dev/main.rs:12:3
+// 2. Unquoted Windows paths (backslash or forward slash): C:\foo\bar.rs:12:3 or C:/foo/bar.ts:12
+// 3. Unquoted POSIX/Windows relative or absolute paths: ./src/a.ts:88, .\src\a.ts:88, /home/dev/main.rs:12:3
 const FILE_LINK_REGEX =
-  /"((?:[A-Za-z]:\\|\/|\.\.?\/)[^"\r\n]+?\.[A-Za-z0-9]{1,10})(?::(\d+))?(?::(\d+))?"|((?:[A-Za-z]:\\|\/|\.\.?\/)[^\s"'`<>|)\]]+?\.[A-Za-z0-9]{1,10})(?::(\d+))?(?::(\d+))?/g
+  /"((?:[A-Za-z]:[\\/]|\/|\.\.?[\\/])[^"\r\n]+?\.[A-Za-z0-9]{1,10})(?::(\d+))?(?::(\d+))?"|((?:[A-Za-z]:[\\/]|\/|\.\.?[\\/])[^\s"'`<>|)\]]+?\.[A-Za-z0-9]{1,10})(?::(\d+))?(?::(\d+))?/g
 
 export function findFileLinks(lineText: string): MatchedFileLink[] {
   const results: MatchedFileLink[] = []

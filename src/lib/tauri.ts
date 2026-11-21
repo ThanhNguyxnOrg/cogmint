@@ -122,6 +122,11 @@ export async function watchWorkspace(workspaceId: string, path: string): Promise
   await invoke('watch_workspace', { workspaceId, path })
 }
 
+export async function unwatchWorkspace(workspaceId: string): Promise<void> {
+  if (!isTauriRuntime()) return
+  await invoke('unwatch_workspace', { workspaceId })
+}
+
 export async function onWorkspaceDirty(
   cb: (workspaceId: string) => void,
 ): Promise<UnlistenFn> {
@@ -131,7 +136,7 @@ export async function onWorkspaceDirty(
 
 export async function saveWorkspaceLayout(
   workspaceId: string,
-  treeJson: string,
+  treeJson: string | null,
   panes: PaneJournalRecord[],
 ): Promise<void> {
   if (!isTauriRuntime()) return

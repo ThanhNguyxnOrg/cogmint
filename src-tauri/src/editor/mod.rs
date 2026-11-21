@@ -40,8 +40,14 @@ pub fn build_editor_argv(
                     "Custom editor command template cannot be empty".into(),
                 ));
             }
-            let tokens: Vec<String> = trimmed
-                .split_whitespace()
+            let raw_tokens = split_quoted_tokens(trimmed);
+            if raw_tokens.is_empty() {
+                return Err(AppError::InvalidInput(
+                    "Custom editor command template cannot be empty".into(),
+                ));
+            }
+            let tokens: Vec<String> = raw_tokens
+                .into_iter()
                 .map(|tok| {
                     tok.replace("{path}", &path.to_string_lossy())
                         .replace("{line}", &line.unwrap_or(1).to_string())
@@ -53,6 +59,27 @@ pub fn build_editor_argv(
             Ok((prog, args))
         }
     }
+}
+
+fn split_quoted_tokens(input: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut cur = String::new();
+    let mut in_quotes = false;
+    for ch in input.chars() {
+        match ch {
+            '"' => in_quotes = !in_quotes,
+            c if c.is_whitespace() && !in_quotes => {
+                if !cur.is_empty() {
+                    tokens.push(std::mem::take(&mut cur));
+                }
+            }
+            c => cur.push(c),
+        }
+    }
+    if !cur.is_empty() {
+        tokens.push(cur);
+    }
+    tokens
 }
 
 fn resolve_windows_shim(program: &str) -> String {
@@ -68,11 +95,10 @@ fn resolve_windows_shim(program: &str) -> String {
             {
                 if out.status.success() {
                     let stdout = String::from_utf8_lossy(&out.stdout);
-                    if let Some(first) = stdout
-                        .lines()
-                        .map(str::trim)
-                        .find(|l| l.ends_with(".cmd") || l.ends_with(".exe"))
-                    {
+                    if let Some(first) = stdout.lines().map(str::trim).find(|l| {
+                        let lower = l.to_ascii_lowercase();
+                        lower.ends_with(".cmd") || lower.ends_with(".exe")
+                    }) {
                         return first.to_string();
                     }
                 }

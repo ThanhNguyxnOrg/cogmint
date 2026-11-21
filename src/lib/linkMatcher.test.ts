@@ -16,3 +16,10 @@ test('parses POSIX absolute and relative file:line links', () => {
   expect(links[0]).toMatchObject({ path: './src/lib/splitTree.ts', line: 88, col: undefined })
   expect(links[1]).toMatchObject({ path: '/home/dev/main.rs', line: 12, col: 3 })
 })
+
+test('parses Windows forward-slash and backslash-relative paths', () => {
+  const links = findFileLinks('At C:/Code/app/main.ts:10:2 and .\\src\\index.tsx:5')
+  expect(links).toHaveLength(2)
+  expect(links[0]).toMatchObject({ path: 'C:/Code/app/main.ts', line: 10, col: 2 })
+  expect(links[1]).toMatchObject({ path: '.\\src\\index.tsx', line: 5 })
+})

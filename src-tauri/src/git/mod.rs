@@ -102,13 +102,30 @@ pub fn get_git_status(dir: &Path) -> AppResult<GitStatusSummary> {
                     behind = b.parse().unwrap_or(0);
                 }
             }
-        } else if let Some(rest) = line.strip_prefix("1 ").or_else(|| line.strip_prefix("2 ")) {
+        } else if let Some(rest) = line.strip_prefix("1 ") {
             let tokens: Vec<&str> = rest.splitn(8, ' ').collect();
             if tokens.len() >= 8 {
                 let xy = tokens[0];
                 let x = xy.chars().next().unwrap_or('.');
                 let y = xy.chars().nth(1).unwrap_or('.');
-                let path = tokens[7].split('\t').next().unwrap_or(tokens[7]).to_string();
+                let path = tokens[7].to_string();
+                let staged = x != '.';
+                let status = if y != '.' { y } else { x }.to_string();
+                changes.push(FileChangeEntry {
+                    path,
+                    status,
+                    staged,
+                    untracked: false,
+                });
+            }
+        } else if let Some(rest) = line.strip_prefix("2 ") {
+            // Porcelain v2 rename/copy lines have an extra <X><score> token before <path>\t<origPath>
+            let tokens: Vec<&str> = rest.splitn(9, ' ').collect();
+            if tokens.len() >= 9 {
+                let xy = tokens[0];
+                let x = xy.chars().next().unwrap_or('.');
+                let y = xy.chars().nth(1).unwrap_or('.');
+                let path = tokens[8].split('\t').next().unwrap_or(tokens[8]).to_string();
                 let staged = x != '.';
                 let status = if y != '.' { y } else { x }.to_string();
                 changes.push(FileChangeEntry {
@@ -168,11 +185,15 @@ pub fn get_file_diff(dir: &Path, rel_path: &str, staged: bool) -> AppResult<File
                 synth.push_str(line);
                 synth.push('\n');
                 if synth.len() > MAX_DIFF_BYTES {
+                    let mut cut = MAX_DIFF_BYTES.min(synth.len());
+                    while cut > 0 && !synth.is_char_boundary(cut) {
+                        cut -= 1;
+                    }
                     return Ok(FileDiffResult {
                         path: rel_path.to_string(),
                         is_binary: false,
                         truncated: true,
-                        unified_diff: synth[..MAX_DIFF_BYTES].to_string(),
+                        unified_diff: synth[..cut].to_string(),
                     });
                 }
             }
@@ -260,5 +281,20 @@ mod tests {
 
         let after = get_git_status(p).unwrap();
         assert!(after.changes.is_empty());
+    }
+
+    #[test]
+    fn test_untracked_multibyte_utf8_diff_truncates_safely_without_panicking() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path();
+        git_command(p, &["init", "-b", "main"]).unwrap();
+        // >256KB of 3-byte Vietnamese UTF-8 characters so byte 262144 falls mid-codepoint
+        let big = "Tiếng Việt — kiểm thử cắt chuỗi an toàn\n".repeat(7_000);
+        std::fs::write(p.join("big-utf8.txt"), big).unwrap();
+
+        let diff = get_file_diff(p, "big-utf8.txt", false).unwrap();
+        assert!(diff.truncated);
+        assert!(!diff.is_binary);
+        assert!(diff.unified_diff.len() <= MAX_DIFF_BYTES);
     }
 }

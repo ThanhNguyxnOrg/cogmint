@@ -50,6 +50,7 @@ pub fn run() {
             commands::workspace_cmds::create_worktree,
             commands::workspace_cmds::remove_worktree,
             commands::workspace_cmds::watch_workspace,
+            commands::workspace_cmds::unwatch_workspace,
             commands::workspace_cmds::save_workspace_layout,
             commands::workspace_cmds::load_workspace_journal,
             commands::workspace_cmds::mark_boot_clean,
@@ -59,6 +60,13 @@ pub fn run() {
             commands::usage_cmds::refresh_pricing,
             commands::usage_cmds::set_pricing_override,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running COGMINT");
+        .build(tauri::generate_context!())
+        .expect("error while building COGMINT")
+        .run(|app_handle, event| {
+            if matches!(event, tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }) {
+                if let Some(pty) = app_handle.try_state::<pty::PtyManager>() {
+                    pty.kill_all();
+                }
+            }
+        });
 }
