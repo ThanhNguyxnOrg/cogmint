@@ -40,6 +40,9 @@ export interface PaneRuntimeState extends PaneJournalRecord {
   attentionState: AttentionState
   latestWords: string | null
   unread: boolean
+  /** Runtime-only override for one-click interactive auth commands (e.g. `gh auth login`). */
+  overrideProgram?: string | null
+  skipDefaultArgs?: boolean
 }
 
 export type SplitDirection = 'horizontal' | 'vertical'

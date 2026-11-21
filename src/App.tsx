@@ -16,7 +16,15 @@ export default function App() {
       usageView={({ summary, onReload, onBack }) => (
         <UsageDashboard summary={summary} onReload={onReload} onBack={onBack} />
       )}
-      settingsModal={({ open, onClose }) => <SettingsModal open={open} onClose={onClose} />}
+      settingsModal={({ open, initialTab, initialHarnessId, onClose, onRunLoginCommand }) => (
+        <SettingsModal
+          open={open}
+          initialTab={initialTab}
+          initialHarnessId={initialHarnessId}
+          onClose={onClose}
+          onRunLoginCommand={onRunLoginCommand}
+        />
+      )}
       createWorktreeModal={({ projectId, onClose }) => (
         <CreateWorktreeModal projectId={projectId} onClose={onClose} />
       )}

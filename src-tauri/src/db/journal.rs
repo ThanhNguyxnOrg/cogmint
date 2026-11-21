@@ -1,7 +1,9 @@
 use crate::db::Database;
 use crate::error::AppResult;
+use crate::harness::auth::HarnessAuthProfile;
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 const CRASH_WINDOW_MS: i64 = 10_000;
 const CRASH_LOOP_THRESHOLD: u32 = 2;
@@ -385,6 +387,86 @@ impl Database {
     pub fn delete_custom_harness(&self, id: &str) -> AppResult<()> {
         let conn = self.lock_conn()?;
         conn.execute("DELETE FROM custom_harnesses WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn upsert_harness_auth_profile(&self, profile: &HarnessAuthProfile) -> AppResult<()> {
+        let conn = self.lock_conn()?;
+        let extra_json =
+            serde_json::to_string(&profile.extra_env).unwrap_or_else(|_| "{}".into());
+        conn.execute(
+            "INSERT INTO harness_auth_profiles (harness_id, api_key, base_url, extra_env_json, use_custom_env)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(harness_id) DO UPDATE SET
+               api_key = excluded.api_key,
+               base_url = excluded.base_url,
+               extra_env_json = excluded.extra_env_json,
+               use_custom_env = excluded.use_custom_env",
+            params![
+                profile.harness_id,
+                profile.api_key,
+                profile.base_url,
+                extra_json,
+                profile.use_custom_env as i32,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_harness_auth_profile(
+        &self,
+        harness_id: &str,
+    ) -> AppResult<Option<HarnessAuthProfile>> {
+        let conn = self.lock_conn()?;
+        let row = conn
+            .query_row(
+                "SELECT harness_id, api_key, base_url, extra_env_json, use_custom_env
+                 FROM harness_auth_profiles WHERE harness_id = ?1",
+                params![harness_id],
+                |row| {
+                    let extra_json: String = row.get(3)?;
+                    let extra_env: HashMap<String, String> =
+                        serde_json::from_str(&extra_json).unwrap_or_default();
+                    Ok(HarnessAuthProfile {
+                        harness_id: row.get(0)?,
+                        api_key: row.get(1)?,
+                        base_url: row.get(2)?,
+                        extra_env,
+                        use_custom_env: row.get::<_, i32>(4)? != 0,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(row)
+    }
+
+    pub fn list_harness_auth_profiles(&self) -> AppResult<Vec<HarnessAuthProfile>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT harness_id, api_key, base_url, extra_env_json, use_custom_env
+             FROM harness_auth_profiles",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let extra_json: String = row.get(3)?;
+            let extra_env: HashMap<String, String> =
+                serde_json::from_str(&extra_json).unwrap_or_default();
+            Ok(HarnessAuthProfile {
+                harness_id: row.get(0)?,
+                api_key: row.get(1)?,
+                base_url: row.get(2)?,
+                extra_env,
+                use_custom_env: row.get::<_, i32>(4)? != 0,
+            })
+        })?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn delete_harness_auth_profile(&self, harness_id: &str) -> AppResult<()> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "DELETE FROM harness_auth_profiles WHERE harness_id = ?1",
+            params![harness_id],
+        )?;
         Ok(())
     }
 }

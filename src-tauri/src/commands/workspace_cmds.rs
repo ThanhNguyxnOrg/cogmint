@@ -98,6 +98,22 @@ pub fn list_workspaces(db: State<'_, Database>) -> AppResult<Vec<WorkspaceRecord
 }
 
 #[tauri::command]
+pub fn delete_project(
+    db: State<'_, Database>,
+    watcher: State<'_, WorkspaceWatcher>,
+    pty: State<'_, PtyManager>,
+    project_id: String,
+) -> AppResult<()> {
+    let workspaces = db.list_workspaces()?;
+    for ws in workspaces.into_iter().filter(|w| w.project_id == project_id) {
+        pty.kill_in_cwd(&PathBuf::from(&ws.path));
+        watcher.unwatch(&ws.id);
+    }
+    db.delete_project(&project_id)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn create_worktree(
     db: State<'_, Database>,
     project_id: String,

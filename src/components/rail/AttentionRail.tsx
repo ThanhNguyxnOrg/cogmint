@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { FolderPlus, GitBranchPlus } from 'lucide-react'
+import { FolderPlus, GitBranchPlus, Trash2 } from 'lucide-react'
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore'
 import { WorktreeCard } from './WorktreeCard'
 
 interface AttentionRailProps {
   width: number
   onAddProject: () => void
+  onRemoveProject?: (projectId: string) => void
   onCreateWorktree: (projectId: string) => void
   onLaunchAgent: (workspaceId: string) => void
 }
@@ -13,6 +14,7 @@ interface AttentionRailProps {
 export function AttentionRail({
   width,
   onAddProject,
+  onRemoveProject,
   onCreateWorktree,
   onLaunchAgent,
 }: AttentionRailProps) {
@@ -82,20 +84,35 @@ export function AttentionRail({
             const projWorkspaces = workspaces.filter((w) => w.projectId === proj.id)
             return (
               <div key={proj.id} className="space-y-1">
-                <div className="flex items-center justify-between px-1.5">
-                  <span className="truncate text-[10px] font-semibold tracking-wider text-fg-3 uppercase">
+                <div className="group flex items-center justify-between px-1.5">
+                  <span
+                    title={proj.rootPath}
+                    className="truncate text-[10px] font-semibold tracking-wider text-fg-3 uppercase"
+                  >
                     {proj.name}
                   </span>
-                  {proj.isGitRepo && (
-                    <button
-                      type="button"
-                      title="New Git worktree"
-                      onClick={() => onCreateWorktree(proj.id)}
-                      className="rounded p-0.5 text-fg-3 hover:bg-white/[0.06] hover:text-fg cursor-pointer"
-                    >
-                      <GitBranchPlus className="size-3" />
-                    </button>
-                  )}
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    {proj.isGitRepo && (
+                      <button
+                        type="button"
+                        title="New Git worktree"
+                        onClick={() => onCreateWorktree(proj.id)}
+                        className="rounded p-0.5 text-fg-3 hover:bg-white/[0.06] hover:text-fg cursor-pointer"
+                      >
+                        <GitBranchPlus className="size-3" />
+                      </button>
+                    )}
+                    {onRemoveProject && (
+                      <button
+                        type="button"
+                        title={`Remove ${proj.name} from COGMINT`}
+                        onClick={() => onRemoveProject(proj.id)}
+                        className="rounded p-0.5 text-fg-3 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/[0.06] hover:text-fail cursor-pointer"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   {projWorkspaces.map((ws) => {

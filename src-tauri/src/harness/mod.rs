@@ -1,11 +1,14 @@
 pub mod attention;
+pub mod auth;
 pub mod detect;
 pub mod resume;
 
 use crate::db::{CustomHarnessRecord, Database};
 use crate::error::AppResult;
+use crate::harness::auth::{detect_harness_auth, HarnessAuthInfo};
 use crate::harness::detect::detect_command_path;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -29,6 +32,7 @@ pub struct HarnessSpec {
     pub enabled: bool,
     pub installed: bool,
     pub resolved_path: Option<String>,
+    pub auth: HarnessAuthInfo,
 }
 
 fn builtin_entry(
@@ -52,6 +56,7 @@ fn builtin_entry(
         enabled: true,
         installed: false,
         resolved_path: None,
+        auth: detect_harness_auth(id, None),
     }
 }
 
@@ -90,6 +95,7 @@ pub fn list_all_harnesses(db: &Database) -> AppResult<Vec<HarnessSpec>> {
                 .take(2)
                 .collect::<String>()
                 .to_uppercase();
+            let id_clone = c.id.clone();
             specs.push(HarnessSpec {
                 id: c.id,
                 name: c.name,
@@ -102,15 +108,23 @@ pub fn list_all_harnesses(db: &Database) -> AppResult<Vec<HarnessSpec>> {
                 enabled: c.enabled,
                 installed: false,
                 resolved_path: None,
+                auth: detect_harness_auth(&id_clone, None),
             });
         }
     }
 
-    // Auto-detect which harnesses are actually installed on this machine
+    let profiles: HashMap<String, _> = db
+        .list_harness_auth_profiles()?
+        .into_iter()
+        .map(|p| (p.harness_id.clone(), p))
+        .collect();
+
+    // Auto-detect which harnesses are actually installed and authenticated on this machine
     for spec in &mut specs {
         let resolved = detect_command_path(&spec.command);
         spec.installed = resolved.is_some();
         spec.resolved_path = resolved;
+        spec.auth = detect_harness_auth(&spec.id, profiles.get(&spec.id));
     }
 
     // Sort installed harnesses first, preserving catalog order within each group

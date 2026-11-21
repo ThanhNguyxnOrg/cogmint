@@ -13,6 +13,7 @@ import type { HarnessSpec } from '../../types/ipc'
 import type { SplitDirection } from '../../types/workspace'
 import type { UsageSummary } from '../../types/usage'
 import {
+  deleteProject,
   detectShells,
   getUsageSummary,
   listHarnesses,
@@ -26,6 +27,7 @@ import {
   unwatchWorkspace,
   watchWorkspace,
 } from '../../lib/tauri'
+import type { SettingsTabId } from '../settings/SettingsModal'
 import { isModKey } from '../../lib/keybindings'
 import { Kbd, LogoMark } from '../ui/Primitives'
 import { AttentionRail } from '../rail/AttentionRail'
@@ -37,7 +39,13 @@ import { CommandPalette, type PaletteCommand } from './CommandPalette'
 interface AppShellProps {
   rightDrawer?: ReactNode
   usageView?: (props: { summary: UsageSummary | null; onReload: () => void; onBack: () => void }) => ReactNode
-  settingsModal?: (props: { open: boolean; onClose: () => void }) => ReactNode
+  settingsModal?: (props: {
+    open: boolean
+    initialTab: SettingsTabId
+    initialHarnessId: string | null
+    onClose: () => void
+    onRunLoginCommand: (harness: HarnessSpec) => void
+  }) => ReactNode
   createWorktreeModal?: (props: {
     projectId: string | null
     onClose: () => void
@@ -60,6 +68,7 @@ export function AppShell({
   const setHarnesses = useWorkspaceStore((s) => s.setHarnesses)
   const restoreFromJournal = useWorkspaceStore((s) => s.restoreFromJournal)
   const addProjectWithWorkspaces = useWorkspaceStore((s) => s.addProjectWithWorkspaces)
+  const removeProject = useWorkspaceStore((s) => s.removeProject)
   const addPane = useWorkspaceStore((s) => s.addPane)
   const jumpToNextAttention = useWorkspaceStore((s) => s.jumpToNextAttention)
   const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace)
@@ -71,6 +80,8 @@ export function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<SettingsTabId>('auth')
+  const [settingsHarnessId, setSettingsHarnessId] = useState<string | null>(null)
   const [worktreeProjectId, setWorktreeProjectId] = useState<string | null>(null)
   const [launchContext, setLaunchContext] = useState<{
     workspaceId: string
@@ -189,6 +200,40 @@ export function AppShell({
     addProjectWithWorkspaces(proj, wts)
   }
 
+  const handleRemoveProject = async (projectId: string) => {
+    await deleteProject(projectId)
+    removeProject(projectId)
+  }
+
+  const openSettings = (tab: SettingsTabId = 'auth', harnessId: string | null = null) => {
+    setSettingsTab(tab)
+    setSettingsHarnessId(harnessId)
+    setSettingsOpen(true)
+  }
+
+  const handleRunLoginCommand = (harness: HarnessSpec) => {
+    const targetWs = activeWorkspace ?? workspaces[0] ?? null
+    const loginCmd = harness.auth?.loginCommand ?? []
+    if (!targetWs || loginCmd.length === 0) return
+    const [program, ...args] = loginCmd
+    const paneId = `auth-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+    addPane(targetWs.id, {
+      id: paneId,
+      workspaceId: targetWs.id,
+      harnessId: harness.id,
+      title: `Sign in: ${harness.name}`,
+      pinned: false,
+      resumeSessionId: null,
+      lastSummary: null,
+      customArgs: args,
+      overrideProgram: program,
+      skipDefaultArgs: true,
+      attentionState: 'idle',
+      latestWords: null,
+    })
+    setView('workspace')
+  }
+
   const handleLaunchHarness = async (opts: {
     harness: HarnessSpec
     extraArgs: string[]
@@ -292,9 +337,9 @@ export function AppShell({
       className="flex h-screen w-screen flex-col overflow-hidden bg-canvas text-fg"
     >
       {/* Top Titlebar (36px) */}
-      <header className="flex h-9 shrink-0 items-center justify-between border-b border-line bg-rail px-3">
+      <header className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-line bg-rail px-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <LogoMark size={18} />
             <span className="text-[11px] font-semibold tracking-[0.16em] text-fg">COGMINT</span>
           </div>
@@ -304,7 +349,7 @@ export function AppShell({
             </span>
           )}
           {safeMode && (
-            <span className="inline-flex items-center gap-1 rounded bg-attn/15 px-1.5 py-0.5 text-[10px] text-attn">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded bg-attn/15 px-1.5 py-0.5 text-[10px] text-attn">
               <ShieldAlert className="size-3" /> Safe Mode
             </span>
           )}
@@ -313,7 +358,7 @@ export function AppShell({
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
-          className="hidden h-6 w-64 items-center justify-between rounded-md border border-line bg-sunken px-2.5 text-[11px] text-fg-3 hover:border-line-strong hover:text-fg-2 md:flex cursor-pointer"
+          className="hidden h-6 w-56 shrink-0 items-center justify-between rounded-md border border-line bg-sunken px-2.5 text-[11px] text-fg-3 hover:border-line-strong hover:text-fg-2 lg:flex cursor-pointer"
         >
           <span className="inline-flex items-center gap-1.5">
             <Search className="size-3" />
@@ -322,7 +367,7 @@ export function AppShell({
           <Kbd keys="⌘K" />
         </button>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={() => {
@@ -336,7 +381,10 @@ export function AppShell({
             }`}
           >
             <BellRing className="size-3" />
-            <span>{attentionCount} Attention</span>
+            <span>
+              {attentionCount}
+              <span className="hidden sm:inline"> Attention</span>
+            </span>
           </button>
 
           <button
@@ -364,8 +412,8 @@ export function AppShell({
 
           <button
             type="button"
-            title="Settings"
-            onClick={() => setSettingsOpen(true)}
+            title="Settings & Auth (Ctrl+,)"
+            onClick={() => openSettings('auth')}
             className="rounded p-1.5 text-fg-3 hover:bg-white/[0.05] hover:text-fg cursor-pointer"
           >
             <Settings className="size-3.5" />
@@ -378,6 +426,7 @@ export function AppShell({
         <AttentionRail
           width={260}
           onAddProject={() => void handleAddProject()}
+          onRemoveProject={(projectId) => void handleRemoveProject(projectId)}
           onCreateWorktree={(projectId) => setWorktreeProjectId(projectId)}
           onLaunchAgent={(workspaceId) => setLaunchContext({ workspaceId })}
         />
@@ -411,6 +460,8 @@ export function AppShell({
         open={launchContext !== null}
         onClose={() => setLaunchContext(null)}
         onLaunch={(opts) => void handleLaunchHarness(opts)}
+        onOpenAuthSettings={(harnessId) => openSettings('auth', harnessId)}
+        onRunLoginCommand={handleRunLoginCommand}
       />
 
       <CommandPalette
@@ -419,7 +470,13 @@ export function AppShell({
         onClose={() => setPaletteOpen(false)}
       />
 
-      {settingsModal?.({ open: settingsOpen, onClose: () => setSettingsOpen(false) })}
+      {settingsModal?.({
+        open: settingsOpen,
+        initialTab: settingsTab,
+        initialHarnessId: settingsHarnessId,
+        onClose: () => setSettingsOpen(false),
+        onRunLoginCommand: handleRunLoginCommand,
+      })}
       {createWorktreeModal?.({
         projectId: worktreeProjectId,
         onClose: () => setWorktreeProjectId(null),

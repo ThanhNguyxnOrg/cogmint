@@ -33,6 +33,7 @@ interface WorkspaceState {
   setHarnesses: (harnesses: HarnessSpec[]) => void
   restoreFromJournal: (snapshot: WorkspaceJournalSnapshot) => void
   addProjectWithWorkspaces: (project: ProjectRecord, workspaces: WorkspaceRecord[]) => void
+  removeProject: (projectId: string) => void
   addWorkspace: (workspace: WorkspaceRecord) => void
   removeWorkspace: (workspaceId: string) => void
   setActiveWorkspace: (workspaceId: string) => void
@@ -153,6 +154,36 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       ]
       const activeWorkspaceId = state.activeWorkspaceId ?? newWorkspaces[0]?.id ?? null
       return { projects, workspaces, activeWorkspaceId }
+    }),
+
+  removeProject: (projectId) =>
+    set((state) => {
+      const projects = state.projects.filter((p) => p.id !== projectId)
+      const removedWsIds = new Set(
+        state.workspaces.filter((w) => w.projectId === projectId).map((w) => w.id),
+      )
+      const workspaces = state.workspaces.filter((w) => w.projectId !== projectId)
+      const treesByWorkspaceId = { ...state.treesByWorkspaceId }
+      for (const wsId of removedWsIds) {
+        delete treesByWorkspaceId[wsId]
+      }
+      const panesById = { ...state.panesById }
+      for (const [id, pane] of Object.entries(panesById)) {
+        if (removedWsIds.has(pane.workspaceId)) delete panesById[id]
+      }
+      const activeWorkspaceId =
+        state.activeWorkspaceId && removedWsIds.has(state.activeWorkspaceId)
+          ? (workspaces[0]?.id ?? null)
+          : state.activeWorkspaceId
+      const nextTree = activeWorkspaceId ? treesByWorkspaceId[activeWorkspaceId] ?? null : null
+      return {
+        projects,
+        workspaces,
+        treesByWorkspaceId,
+        panesById,
+        activeWorkspaceId,
+        focusedLeafId: nextTree ? firstLeafId(nextTree) : null,
+      }
     }),
 
   addWorkspace: (workspace) =>

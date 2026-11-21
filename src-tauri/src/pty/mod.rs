@@ -36,6 +36,8 @@ pub struct SpawnPtyRequest {
     pub cwd: String,
     pub cols: u16,
     pub rows: u16,
+    #[serde(default)]
+    pub harness_id: Option<String>,
     pub program: Option<String>,
     #[serde(default)]
     pub args: Vec<String>,
@@ -401,6 +403,7 @@ mod tests {
                 cwd: std::env::temp_dir().to_string_lossy().to_string(),
                 cols: 80,
                 rows: 24,
+                harness_id: None,
                 program: Some(prog),
                 args,
                 env: HashMap::new(),

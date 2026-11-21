@@ -137,6 +137,14 @@ impl Database {
                 cache_read_per_mtok REAL NOT NULL,
                 cache_write_per_mtok REAL NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS harness_auth_profiles (
+                harness_id TEXT PRIMARY KEY,
+                api_key TEXT,
+                base_url TEXT,
+                extra_env_json TEXT NOT NULL DEFAULT '{}',
+                use_custom_env INTEGER NOT NULL DEFAULT 0
+            );
             ",
         )?;
         Ok(())

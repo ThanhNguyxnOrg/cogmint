@@ -12,9 +12,11 @@ import type {
   EditorPreset,
   FileDiffResult,
   GitStatusSummary,
+  HarnessAuthProfileSummary,
   HarnessSpec,
   MergePreview,
   PtyStreamEvent,
+  SaveHarnessAuthProfileRequest,
   ShellProfile,
   SpawnPtyRequest,
 } from '../types/ipc'
@@ -89,10 +91,32 @@ export async function resolveResumeSession(
   return invoke<string | null>('resolve_resume_session', { harnessId, cwd })
 }
 
+export async function listHarnessAuthProfiles(): Promise<HarnessAuthProfileSummary[]> {
+  if (!isTauriRuntime()) return []
+  return invoke<HarnessAuthProfileSummary[]>('list_harness_auth_profiles')
+}
+
+export async function saveHarnessAuthProfile(
+  request: SaveHarnessAuthProfileRequest,
+): Promise<HarnessAuthProfileSummary | null> {
+  if (!isTauriRuntime()) return null
+  return invoke<HarnessAuthProfileSummary>('save_harness_auth_profile', { request })
+}
+
+export async function clearHarnessAuthProfile(harnessId: string): Promise<void> {
+  if (!isTauriRuntime()) return
+  await invoke('clear_harness_auth_profile', { harnessId })
+}
+
 export async function registerProject(
   rootPath: string,
 ): Promise<[ProjectRecord, WorkspaceRecord[]]> {
   return invoke<[ProjectRecord, WorkspaceRecord[]]>('register_project', { rootPath })
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  if (!isTauriRuntime()) return
+  await invoke('delete_project', { projectId })
 }
 
 export async function pickDirectoryDialog(): Promise<string | null> {

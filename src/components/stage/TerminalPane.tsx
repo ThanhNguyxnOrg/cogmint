@@ -48,8 +48,9 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
     spawnedRef.current = true
     updatePaneAttention(pane.id, 'working', pane.latestWords)
 
-    const args: string[] = [...(harness?.defaultArgs ?? []), ...pane.customArgs]
-    if (!fresh && pane.resumeSessionId && harness) {
+    const baseArgs = pane.skipDefaultArgs ? [] : (harness?.defaultArgs ?? [])
+    const args: string[] = [...baseArgs, ...pane.customArgs]
+    if (!fresh && !pane.skipDefaultArgs && pane.resumeSessionId && harness) {
       if (harness.id === 'claude') args.push('--resume', pane.resumeSessionId)
       else if (harness.id === 'codex') args.push('resume', pane.resumeSessionId)
       else if (harness.id === 'opencode') args.push('-s', pane.resumeSessionId)
@@ -66,7 +67,8 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
           cwd: workspace.path,
           cols,
           rows,
-          program: harness?.command ?? null,
+          harnessId: harness?.id ?? pane.harnessId,
+          program: pane.overrideProgram ?? harness?.command ?? null,
           args,
           shellProfile: workspace.shellProfile ?? defaultShellId,
         },

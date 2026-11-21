@@ -1,5 +1,15 @@
 import { useState } from 'react'
-import { CheckCircle2, ChevronDown, ChevronRight, RefreshCw, Search, X } from 'lucide-react'
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  KeyRound,
+  LogIn,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  X,
+} from 'lucide-react'
 import type { HarnessSpec } from '../../types/ipc'
 import { listHarnesses } from '../../lib/tauri'
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore'
@@ -15,9 +25,17 @@ interface LaunchHarnessModalProps {
     shellProfile: string | null
     resumeLatest: boolean
   }) => void
+  onOpenAuthSettings?: (harnessId: string) => void
+  onRunLoginCommand?: (harness: HarnessSpec) => void
 }
 
-export function LaunchHarnessModal({ open, onClose, onLaunch }: LaunchHarnessModalProps) {
+export function LaunchHarnessModal({
+  open,
+  onClose,
+  onLaunch,
+  onOpenAuthSettings,
+  onRunLoginCommand,
+}: LaunchHarnessModalProps) {
   const harnesses = useWorkspaceStore((s) => s.harnesses)
   const setHarnesses = useWorkspaceStore((s) => s.setHarnesses)
   const availableShells = useSettingsStore((s) => s.availableShells)
@@ -151,7 +169,19 @@ export function LaunchHarnessModal({ open, onClose, onLaunch }: LaunchHarnessMod
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
                           <span className="truncate text-[11px] font-medium text-fg">{h.name}</span>
-                          <CheckCircle2 className="size-2.5 shrink-0 text-done" />
+                          {h.auth?.status === 'authenticated' ? (
+                            <CheckCircle2
+                              aria-label="Authenticated"
+                              className="size-2.5 shrink-0 text-done"
+                            />
+                          ) : h.auth?.status === 'unauthenticated' ? (
+                            <ShieldAlert
+                              aria-label="Not signed in"
+                              className="size-2.5 shrink-0 text-attn"
+                            />
+                          ) : (
+                            <CheckCircle2 className="size-2.5 shrink-0 text-done" />
+                          )}
                         </div>
                         <div className="truncate font-mono text-[10px] text-fg-3">{h.command}</div>
                       </div>
@@ -209,6 +239,59 @@ export function LaunchHarnessModal({ open, onClose, onLaunch }: LaunchHarnessMod
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeHarness?.auth && (
+            <div
+              className={`flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-[11px] ${
+                activeHarness.auth.status === 'authenticated'
+                  ? 'border-done/25 bg-done/5 text-fg-2'
+                  : 'border-attn/30 bg-attn/10 text-attn'
+              }`}
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                {activeHarness.auth.status === 'authenticated' ? (
+                  <CheckCircle2 className="size-3.5 shrink-0 text-done" />
+                ) : (
+                  <ShieldAlert className="size-3.5 shrink-0 text-attn" />
+                )}
+                <span className="truncate">
+                  {activeHarness.auth.status === 'authenticated'
+                    ? `Auth ready · ${activeHarness.auth.detail ?? 'Signed in'}`
+                    : `${activeHarness.name} is not signed in yet`}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {activeHarness.auth.status !== 'authenticated' &&
+                  activeHarness.auth.loginCommand.length > 0 &&
+                  onRunLoginCommand && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRunLoginCommand(activeHarness)
+                        onClose()
+                      }}
+                      className="inline-flex items-center gap-1 rounded bg-cobalt px-2 py-0.5 text-[10px] font-medium text-white hover:bg-cobalt-hover cursor-pointer"
+                    >
+                      <LogIn className="size-2.5" />
+                      Sign In
+                    </button>
+                  )}
+                {onOpenAuthSettings && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose()
+                      onOpenAuthSettings(activeHarness.id)
+                    }}
+                    className="inline-flex items-center gap-1 rounded border border-line-strong bg-raised px-2 py-0.5 text-[10px] font-medium text-fg-2 hover:text-fg cursor-pointer"
+                  >
+                    <KeyRound className="size-2.5" />
+                    API / Auth
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

@@ -16,6 +16,7 @@ export interface SpawnPtyRequest {
   cwd: string
   cols: number
   rows: number
+  harnessId?: string | null
   program?: string | null
   args?: string[]
   env?: Record<string, string>
@@ -32,6 +33,38 @@ export interface ShellProfile {
 
 export type ResumeStrategy = 'exactFlag' | 'latestFlag' | 'bareRelaunch'
 
+export type AuthStatus = 'authenticated' | 'unauthenticated' | 'unknown'
+export type AuthMethod = 'cogmint_profile' | 'env_var' | 'oauth_file' | 'none'
+
+export interface HarnessAuthInfo {
+  status: AuthStatus
+  method: AuthMethod
+  detail: string | null
+  loginCommand: string[]
+  apiKeyEnv: string | null
+  baseUrlEnv: string | null
+  supportsOauth: boolean
+  authNotes: string
+}
+
+export interface HarnessAuthProfileSummary {
+  harnessId: string
+  hasApiKey: boolean
+  apiKeyPreview: string | null
+  baseUrl: string | null
+  extraEnv: Record<string, string>
+  useCustomEnv: boolean
+}
+
+export interface SaveHarnessAuthProfileRequest {
+  harnessId: string
+  apiKey?: string | null
+  clearApiKey?: boolean
+  baseUrl?: string | null
+  extraEnv: Record<string, string>
+  useCustomEnv: boolean
+}
+
 export interface HarnessSpec {
   id: string
   name: string
@@ -44,6 +77,7 @@ export interface HarnessSpec {
   enabled: boolean
   installed: boolean
   resolvedPath: string | null
+  auth?: HarnessAuthInfo
 }
 
 export interface CustomHarnessRecord {

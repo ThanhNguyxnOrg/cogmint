@@ -1,18 +1,49 @@
-import { useState } from 'react'
-import { Plus, Trash2, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import {
+  CheckCircle2,
+  KeyRound,
+  LogIn,
+  Plus,
+  RefreshCw,
+  ShieldAlert,
+  Trash2,
+  X,
+} from 'lucide-react'
+import type { HarnessAuthProfileSummary, HarnessSpec } from '../../types/ipc'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore'
-import { deleteCustomHarness, listHarnesses, upsertCustomHarness } from '../../lib/tauri'
+import {
+  clearHarnessAuthProfile,
+  deleteCustomHarness,
+  listHarnessAuthProfiles,
+  listHarnesses,
+  saveHarnessAuthProfile,
+  upsertCustomHarness,
+} from '../../lib/tauri'
 import { Btn, HarnessGlyph } from '../ui/Primitives'
+
+export type SettingsTabId = 'auth' | 'shells' | 'editor' | 'harnesses'
 
 interface SettingsModalProps {
   open: boolean
+  initialTab?: SettingsTabId
+  initialHarnessId?: string | null
   onClose: () => void
+  onRunLoginCommand?: (harness: HarnessSpec) => void
 }
 
-type TabId = 'shells' | 'editor' | 'harnesses'
+interface EnvPair {
+  key: string
+  value: string
+}
 
-export function SettingsModal({ open, onClose }: SettingsModalProps) {
+export function SettingsModal({
+  open,
+  initialTab = 'auth',
+  initialHarnessId = null,
+  onClose,
+  onRunLoginCommand,
+}: SettingsModalProps) {
   const availableShells = useSettingsStore((s) => s.availableShells)
   const wslDistros = useSettingsStore((s) => s.wslDistros)
   const defaultShellId = useSettingsStore((s) => s.defaultShellId)
@@ -23,14 +54,130 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const harnesses = useWorkspaceStore((s) => s.harnesses)
   const setHarnesses = useWorkspaceStore((s) => s.setHarnesses)
 
-  const [tab, setTab] = useState<TabId>('shells')
+  const [tab, setTab] = useState<SettingsTabId>(initialTab)
+  const [selectedHarnessId, setSelectedHarnessId] = useState<string>(initialHarnessId ?? '')
+  const [profilesById, setProfilesById] = useState<Record<string, HarnessAuthProfileSummary>>({})
+  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [baseUrlInput, setBaseUrlInput] = useState('')
+  const [useCustomEnv, setUseCustomEnv] = useState(false)
+  const [extraEnvRows, setExtraEnvRows] = useState<EnvPair[]>([])
+  const [savingAuth, setSavingAuth] = useState(false)
+  const [authSavedNotice, setAuthSavedNotice] = useState<string | null>(null)
+  const [rechecking, setRechecking] = useState(false)
+
   const [customEditorTemplate, setCustomEditorTemplate] = useState(
     editorPreset.kind === 'custom' ? editorPreset.template : 'nvim +{line} {path}',
   )
   const [newName, setNewName] = useState('')
   const [newCmd, setNewCmd] = useState('')
 
+  useEffect(() => {
+    if (!open) return
+    setTab(initialTab)
+    if (initialHarnessId) {
+      setSelectedHarnessId(initialHarnessId)
+    }
+    void (async () => {
+      const profiles = await listHarnessAuthProfiles()
+      setProfilesById(Object.fromEntries(profiles.map((p) => [p.harnessId, p])))
+    })()
+  }, [open, initialTab, initialHarnessId])
+
+  const activeHarness =
+    harnesses.find((h) => h.id === selectedHarnessId) ??
+    harnesses.find((h) => h.installed) ??
+    harnesses[0] ??
+    null
+
+  useEffect(() => {
+    if (!activeHarness) return
+    const prof = profilesById[activeHarness.id]
+    setApiKeyInput('')
+    setBaseUrlInput(prof?.baseUrl ?? '')
+    setUseCustomEnv(prof?.useCustomEnv ?? false)
+    setExtraEnvRows(
+      prof
+        ? Object.entries(prof.extraEnv).map(([key, value]) => ({ key, value }))
+        : [],
+    )
+    setAuthSavedNotice(null)
+  }, [activeHarness?.id, profilesById])
+
   if (!open) return null
+
+  const activeProfile = activeHarness ? profilesById[activeHarness.id] : undefined
+
+  const handleRecheckAuth = async () => {
+    setRechecking(true)
+    try {
+      const [updated, profiles] = await Promise.all([
+        listHarnesses(),
+        listHarnessAuthProfiles(),
+      ])
+      if (updated.length > 0) setHarnesses(updated)
+      setProfilesById(Object.fromEntries(profiles.map((p) => [p.harnessId, p])))
+    } finally {
+      setRechecking(false)
+    }
+  }
+
+  const handleSaveAuth = async (clearApiKey = false) => {
+    if (!activeHarness) return
+    setSavingAuth(true)
+    setAuthSavedNotice(null)
+    try {
+      const extraEnv: Record<string, string> = {}
+      for (const row of extraEnvRows) {
+        const k = row.key.trim()
+        if (k) extraEnv[k] = row.value
+      }
+      const hasAnyCustom =
+        (!clearApiKey && (apiKeyInput.trim().length > 0 || activeProfile?.hasApiKey)) ||
+        baseUrlInput.trim().length > 0 ||
+        Object.keys(extraEnv).length > 0
+      const nextUseCustom = clearApiKey ? useCustomEnv : useCustomEnv || hasAnyCustom
+
+      const summary = await saveHarnessAuthProfile({
+        harnessId: activeHarness.id,
+        apiKey: apiKeyInput.trim() ? apiKeyInput.trim() : null,
+        clearApiKey,
+        baseUrl: baseUrlInput.trim() ? baseUrlInput.trim() : null,
+        extraEnv,
+        useCustomEnv: nextUseCustom,
+      })
+      if (summary) {
+        setProfilesById((prev) => ({ ...prev, [summary.harnessId]: summary }))
+      }
+      setApiKeyInput('')
+      const updated = await listHarnesses()
+      if (updated.length > 0) setHarnesses(updated)
+      setAuthSavedNotice(clearApiKey ? 'Stored API key cleared' : 'Auth profile saved')
+    } finally {
+      setSavingAuth(false)
+    }
+  }
+
+  const handleResetAuthProfile = async () => {
+    if (!activeHarness) return
+    setSavingAuth(true)
+    try {
+      await clearHarnessAuthProfile(activeHarness.id)
+      setProfilesById((prev) => {
+        const next = { ...prev }
+        delete next[activeHarness.id]
+        return next
+      })
+      setApiKeyInput('')
+      setBaseUrlInput('')
+      setUseCustomEnv(false)
+      setExtraEnvRows([])
+      const updated = await listHarnesses()
+      if (updated.length > 0) setHarnesses(updated)
+      setAuthSavedNotice('Reset to default CLI auth')
+    } finally {
+      setSavingAuth(false)
+    }
+  }
 
   const handleAddHarness = async () => {
     if (!newName.trim() || !newCmd.trim()) return
@@ -63,13 +210,14 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="flex h-[480px] w-full max-w-2xl animate-modal-in overflow-hidden rounded-lg border border-line-strong bg-raised shadow-2xl">
+      <div className="flex h-[560px] w-full max-w-3xl animate-modal-in overflow-hidden rounded-lg border border-line-strong bg-raised shadow-2xl">
         <nav className="w-44 shrink-0 border-r border-line bg-rail p-2">
           <div className="px-2 py-1.5 text-[10px] font-semibold tracking-wider text-fg-3 uppercase">
             Settings
           </div>
           {(
             [
+              ['auth', 'Auth & API Keys'],
               ['shells', 'Shells & OS'],
               ['editor', 'External Editor'],
               ['harnesses', 'CLI Harnesses'],
@@ -91,24 +239,285 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <h2 className="text-[13px] font-semibold text-fg">
-              {tab === 'shells'
-                ? 'Shells & OS Profiles'
-                : tab === 'editor'
-                  ? 'External Editor'
-                  : 'CLI Harnesses'}
+              {tab === 'auth'
+                ? 'Multi-Harness Auth & API Keys'
+                : tab === 'shells'
+                  ? 'Shells & OS Profiles'
+                  : tab === 'editor'
+                    ? 'External Editor'
+                    : 'CLI Harnesses'}
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded p-1 text-fg-3 hover:bg-white/[0.06] hover:text-fg cursor-pointer"
-            >
-              <X className="size-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {tab === 'auth' && (
+                <button
+                  type="button"
+                  onClick={() => void handleRecheckAuth()}
+                  className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-fg-3 hover:bg-white/[0.06] hover:text-fg cursor-pointer"
+                >
+                  <RefreshCw className={`size-3 ${rechecking ? 'animate-spin' : ''}`} />
+                  Re-check Auth
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded p-1 text-fg-3 hover:bg-white/[0.06] hover:text-fg cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            {tab === 'auth' && (
+              <div className="flex h-full min-h-[420px] gap-3">
+                {/* Harness selector list */}
+                <div className="w-44 shrink-0 space-y-1 overflow-y-auto pr-1">
+                  {harnesses.map((h) => {
+                    const selected = activeHarness?.id === h.id
+                    const isAuthed = h.auth?.status === 'authenticated'
+                    return (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => setSelectedHarnessId(h.id)}
+                        className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors cursor-pointer ${
+                          selected
+                            ? 'border-cobalt bg-cobalt/15 text-fg'
+                            : 'border-transparent bg-sunken/60 text-fg-2 hover:bg-hover/60'
+                        }`}
+                      >
+                        <HarnessGlyph harness={h} size={18} />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[11px] font-medium">{h.name}</div>
+                          <div className="truncate font-mono text-[9px] text-fg-3">
+                            {h.installed ? 'Installed' : 'Not installed'}
+                          </div>
+                        </div>
+                        <span
+                          title={isAuthed ? h.auth?.detail ?? 'Authenticated' : 'Not signed in'}
+                          className={`size-2 shrink-0 rounded-full ${
+                            isAuthed ? 'bg-done' : 'bg-attn/70'
+                          }`}
+                        />
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Selected harness auth editor */}
+                {activeHarness ? (
+                  <div className="min-w-0 flex-1 space-y-3 overflow-y-auto rounded-md border border-line bg-sunken/70 p-3.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <HarnessGlyph harness={activeHarness} size={26} />
+                        <div>
+                          <div className="text-[12px] font-semibold text-fg">
+                            {activeHarness.name}
+                          </div>
+                          <div className="font-mono text-[10px] text-fg-3">
+                            {activeHarness.command}
+                          </div>
+                        </div>
+                      </div>
+
+                      {activeHarness.auth?.status === 'authenticated' ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-done/15 px-2 py-0.5 text-[10px] font-medium text-done">
+                          <CheckCircle2 className="size-3" />
+                          {activeHarness.auth.detail ?? 'Signed in'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-attn/15 px-2 py-0.5 text-[10px] font-medium text-attn">
+                          <ShieldAlert className="size-3" />
+                          Not signed in
+                        </span>
+                      )}
+                    </div>
+
+                    {activeHarness.auth?.authNotes && (
+                      <p className="text-[11px] leading-relaxed text-fg-2">
+                        {activeHarness.auth.authNotes}
+                      </p>
+                    )}
+
+                    {/* Interactive OAuth / CLI Login */}
+                    {activeHarness.auth && activeHarness.auth.loginCommand.length > 0 && (
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-line bg-raised px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-medium text-fg">
+                            Interactive CLI Sign-In (OAuth / Subscription)
+                          </div>
+                          <code className="block truncate font-mono text-[10px] text-fg-3">
+                            $ {activeHarness.auth.loginCommand.join(' ')}
+                          </code>
+                        </div>
+                        <Btn
+                          variant="primary"
+                          onClick={() => {
+                            onRunLoginCommand?.(activeHarness)
+                            onClose()
+                          }}
+                          disabled={!onRunLoginCommand}
+                        >
+                          <LogIn className="size-3" />
+                          Sign In in Terminal
+                        </Btn>
+                      </div>
+                    )}
+
+                    {/* API Key & Custom Proxy Env Override */}
+                    <div className="space-y-3 rounded-md border border-line bg-raised p-3">
+                      <label className="flex items-center justify-between gap-2 text-[11px] font-medium text-fg cursor-pointer">
+                        <span className="inline-flex items-center gap-1.5">
+                          <KeyRound className="size-3.5 text-cobalt" />
+                          Inject COGMINT API Key / Custom Env on Launch
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={useCustomEnv}
+                          onChange={(e) => setUseCustomEnv(e.target.checked)}
+                          className="rounded border-line bg-sunken accent-cobalt"
+                        />
+                      </label>
+
+                      {activeHarness.auth?.apiKeyEnv && (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-[10px] text-fg-2">
+                              {activeHarness.auth.apiKeyEnv}
+                            </span>
+                            {activeProfile?.hasApiKey && (
+                              <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-done">
+                                Saved: {activeProfile.apiKeyPreview}
+                                <button
+                                  type="button"
+                                  onClick={() => void handleSaveAuth(true)}
+                                  className="text-fg-3 underline hover:text-fail cursor-pointer"
+                                >
+                                  Clear
+                                </button>
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="password"
+                            value={apiKeyInput}
+                            onChange={(e) => setApiKeyInput(e.target.value)}
+                            placeholder={
+                              activeProfile?.hasApiKey
+                                ? 'Leave blank to keep saved key, or paste new key...'
+                                : `Paste ${activeHarness.auth.apiKeyEnv}...`
+                            }
+                            className="w-full rounded-md border border-line bg-sunken px-2.5 py-1.5 font-mono text-[11px] text-fg placeholder:text-fg-3 focus:border-cobalt focus:outline-none"
+                          />
+                        </div>
+                      )}
+
+                      {activeHarness.auth?.baseUrlEnv && (
+                        <div className="space-y-1">
+                          <span className="font-mono text-[10px] text-fg-2">
+                            {activeHarness.auth.baseUrlEnv} (optional proxy / gateway)
+                          </span>
+                          <input
+                            type="url"
+                            value={baseUrlInput}
+                            onChange={(e) => setBaseUrlInput(e.target.value)}
+                            placeholder="https://api.example.com/v1"
+                            className="w-full rounded-md border border-line bg-sunken px-2.5 py-1.5 font-mono text-[11px] text-fg placeholder:text-fg-3 focus:border-cobalt focus:outline-none"
+                          />
+                        </div>
+                      )}
+
+                      {/* Extra Env Vars */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-medium text-fg-2">
+                            Extra Environment Variables (e.g. ANTHROPIC_AUTH_TOKEN, HTTP_PROXY)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExtraEnvRows((rows) => [...rows, { key: '', value: '' }])
+                            }
+                            className="inline-flex items-center gap-0.5 text-[10px] text-cobalt hover:underline cursor-pointer"
+                          >
+                            <Plus className="size-3" /> Add Var
+                          </button>
+                        </div>
+
+                        {extraEnvRows.map((row, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5">
+                            <input
+                              value={row.key}
+                              onChange={(e) =>
+                                setExtraEnvRows((rows) =>
+                                  rows.map((r, i) =>
+                                    i === idx ? { ...r, key: e.target.value } : r,
+                                  ),
+                                )
+                              }
+                              placeholder="ENV_KEY"
+                              className="w-40 rounded border border-line bg-sunken px-2 py-1 font-mono text-[10px] text-fg"
+                            />
+                            <input
+                              value={row.value}
+                              onChange={(e) =>
+                                setExtraEnvRows((rows) =>
+                                  rows.map((r, i) =>
+                                    i === idx ? { ...r, value: e.target.value } : r,
+                                  ),
+                                )
+                              }
+                              placeholder="value"
+                              className="min-w-0 flex-1 rounded border border-line bg-sunken px-2 py-1 font-mono text-[10px] text-fg"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExtraEnvRows((rows) => rows.filter((_, i) => i !== idx))
+                              }
+                              className="rounded p-1 text-fg-3 hover:text-fail cursor-pointer"
+                            >
+                              <Trash2 className="size-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-done">{authSavedNotice ?? ''}</span>
+                        <div className="flex items-center gap-2">
+                          {activeProfile && (
+                            <Btn
+                              variant="ghost"
+                              onClick={() => void handleResetAuthProfile()}
+                              disabled={savingAuth}
+                            >
+                              Reset
+                            </Btn>
+                          )}
+                          <Btn
+                            variant="primary"
+                            onClick={() => void handleSaveAuth(false)}
+                            disabled={savingAuth}
+                          >
+                            {savingAuth ? 'Saving...' : 'Save Auth Profile'}
+                          </Btn>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-fg-3">
+                      Stored locally in COGMINT SQLite only. Injected strictly into spawned PTY
+                      processes — never modifies your external CLI config files.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             {tab === 'shells' && (
-              <>
+              <div className="space-y-4">
                 <label className="block space-y-1">
                   <span className="text-[11px] font-medium text-fg-2">Default Login Shell</span>
                   <select
@@ -137,7 +546,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     </span>
                   )}
                 </div>
-              </>
+              </div>
             )}
 
             {tab === 'editor' && (
