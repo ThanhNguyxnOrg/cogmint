@@ -21,6 +21,7 @@ import {
   deleteProject,
   detectShells,
   getUsageSummary,
+  killPty,
   listHarnesses,
   listWslDistros,
   loadWorkspaceJournal,
@@ -215,6 +216,26 @@ export function AppShell({
       } else if (!e.shiftKey && key === 'b') {
         e.preventDefault()
         setLeftRailOpen((v) => !v)
+      } else if (!e.shiftKey && key === 'w' && activeWorkspaceId) {
+        const state = useWorkspaceStore.getState()
+        const tree = state.treesByWorkspaceId[activeWorkspaceId]
+        const findActiveInLeaf = (
+          node: typeof tree,
+          leafId: string | null,
+        ): string | null => {
+          if (!node) return null
+          if (node.type === 'leaf') {
+            return !leafId || node.id === leafId ? node.activePaneId : null
+          }
+          return findActiveInLeaf(node.first, leafId) ?? findActiveInLeaf(node.second, leafId)
+        }
+        const activePaneId = findActiveInLeaf(tree, state.focusedLeafId)
+        const activePane = activePaneId ? state.panesById[activePaneId] : null
+        if (activePane && !activePane.pinned) {
+          e.preventDefault()
+          void killPty(activePane.id)
+          state.closePane(activePane.id)
+        }
       } else if (e.shiftKey && key === 'u') {
         e.preventDefault()
         setView((v) => (v === 'usage' ? 'workspace' : 'usage'))

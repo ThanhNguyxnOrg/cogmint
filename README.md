@@ -24,16 +24,49 @@
 
 ## What is COGMINT v2?
 
-COGMINT v2 is a **local-first, zero-telemetry desktop workstation** built on **Tauri v2 (Rust) + React 19 + Tailwind CSS v4** for running multiple CLI coding agents side-by-side in isolated Git worktrees.
+COGMINT v2 is a **local-first, zero-telemetry desktop workstation** built on **Tauri v2 (Rust) + React 19 + Tailwind CSS v4 + WebGL `xterm.js`** for running multiple AI coding CLI agents side-by-side in isolated Git worktrees across **Windows, macOS, and Linux**.
 
-- **12 Built-In CLI Harnesses + Custom CLIs:** Claude Code (`claude`), Codex (`codex`), OpenCode (`opencode`), Gemini CLI (`gemini`), Copilot CLI (`copilot`), Antigravity (`agy`), Amp (`amp`), Kimi (`kimi`), Kiro (`kiro-cli`), Grok (`grok`), Mistral Vibe (`vibe`), Droid (`droid`), plus any user-defined CLI command.
-- **Attention-First Agent Rail:** Real-time `working`, `needs_attention`, `done`, `failed`, `idle`, and `hibernated` indicators with latest-words previews and native OS notifications.
-- **Real 3-OS PTYs (`portable-pty`):** Native ConPTY on Windows (`pwsh`, `powershell`, Git Bash, `cmd`, plus optional `wsl.exe` profiles) and `openpty` login shells on macOS/Linux, streamed via Tauri v2 `ipc::Channel` into WebGL `xterm.js` split panes.
-- **Git Worktree Isolation & Read-Only Diff Surface:** Safe worktree creation (never auto-deletes existing directories on error), `.worktreeinclude` copying with path-traversal protection, `notify` FS watching, unified diff inspection, quick commit, read-only `git merge-tree` conflict dry-run, and `Cmd/Ctrl+Click` external editor jump (VS Code, Cursor, Zed, custom).
-- **Real Local Usage & Cost Accounting:** Incremental parsers for local Claude Code, Codex, and OpenCode logs mapped to an updatable `pricing.json` catalog — **zero mock data, zero telemetry, zero OAuth scraping**.
-- **Crash-Safe Lazy Session Restore:** WAL SQLite journal restores panes in a dormant `hibernated` state (one click or `Enter` to resume) with an automatic crash-loop safe-mode guard.
+### Key Features
+
+- **20 Built-In CLI Harnesses + Unlimited Custom CLIs (Auto-Detected):**
+  - Automatically scans your OS `PATH` (and Windows `.cmd`/`.exe` shims) to surface only installed CLIs first, with bundled official brand logos (100% offline):
+    **Claude Code** (`claude`), **Codex CLI** (`codex`), **OpenCode** (`opencode`), **Gemini CLI** (`gemini`), **Cursor Agent** (`cursor-agent`), **Copilot CLI** (`copilot`), **Antigravity** (`agy`), **Aider** (`aider`), **Cline CLI** (`cline`), **Qwen Code** (`qwen`), **Goose** (`goose`), **Kilo Code** (`kilocode`), **Roo Code** (`roo`), **Amp** (`amp`), **Kimi Code** (`kimi`), **Kiro CLI** (`kiro-cli`), **Grok Build** (`grok`), **Mistral Vibe** (`vibe`), **Factory Droid** (`droid`), and **Amazon Q** (`q chat`).
+  - **Extensible Custom CLI Manager:** Add, edit, enable/disable, pick icon presets/accent colors, and **Export/Import JSON** for any custom or internal CLI agent.
+- **Multi-Harness Auth, One-Click OAuth Sign-In & Per-PTY API Key/Proxy Profiles:**
+  - Live read-only detection of OAuth credentials, OS environment variables, and COGMINT profiles — **never exposes raw OAuth tokens and never mutates external CLI config files**.
+  - One-click **Sign In in Terminal** spawns each CLI's official interactive login flow (`claude auth login`, `codex login`, `opencode auth login`, `gemini`, `gh auth login`, `cursor-agent login`, etc.) and auto-refreshes auth status upon completion.
+  - Per-harness **API Key**, **Custom Base URL / Gateway** (`ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`, etc.), and **Extra Environment Variables** stored locally in SQLite and injected strictly into spawned PTY processes.
+- **Real 3-OS Native PTYs (`portable-pty`) & Draggable Split Workspace:**
+  - Native ConPTY on Windows (`pwsh`, `powershell`, Git Bash, `cmd`, plus optional `wsl.exe` profiles) and `openpty` login shells on macOS/Linux, streamed over Tauri v2 `ipc::Channel`.
+  - Freely draggable resize handles for both sidebars and every vertical/horizontal split pane (double-click to reset), drag-and-drop tab reordering, middle-click tab close, and responsive viewport clamping down to half-screen (`720×500`).
+- **Attention-First Agent Rail & Native OS Notifications:**
+  - Real-time `working`, `needs_attention`, `done`, `failed`, `idle`, and `hibernated` indicators with latest-words previews and native OS notifications when a background agent needs approval.
+- **Git Worktree Isolation & Read-Only Diff Surface:**
+  - Safe worktree creation (never deletes existing directories on error), `.worktreeinclude` copying with path-traversal protection, `notify` FS watching, unified diff inspection, quick commit, read-only `git merge-tree --write-tree` conflict dry-run, and `Cmd/Ctrl+Click` external editor jump (VS Code, Cursor, Zed, custom).
+- **Real Local Usage & Cost Accounting:**
+  - Incremental parsers for local Claude Code, Codex, and OpenCode logs mapped to an updatable `pricing.json` catalog — **zero mock data, zero telemetry**.
+- **Crash-Safe Lazy Session Restore:**
+  - WAL SQLite journal restores panes in a dormant `hibernated` state (one click or `Enter` to resume) with an automatic crash-loop safe-mode guard.
 
 > **Legacy v1 (Nuxt):** The original Claude-only Nuxt control plane is preserved at git tag `archive/nuxt-v1`.
+
+---
+
+## Keyboard Shortcuts (Windows / Linux / macOS)
+
+| Action | Windows / Linux | macOS |
+|---|---|---|
+| Command Palette | `Ctrl + K` | `⌘ + K` |
+| Launch CLI Harness Tab | `Ctrl + T` | `⌘ + T` |
+| Split Pane Right (Vertical) | `Ctrl + D` | `⌘ + D` |
+| Split Pane Down (Horizontal) | `Ctrl + Shift + D` | `⌘ + ⇧ + D` |
+| Close Active Unpinned Tab | `Ctrl + W` (or Middle-Click) | `⌘ + W` (or Middle-Click) |
+| Jump to Next Pane Needing Attention | `Ctrl + Shift + A` | `⌘ + ⇧ + A` |
+| Toggle Left Workspaces Sidebar | `Ctrl + B` | `⌘ + B` |
+| Toggle Right Git Changes Drawer | `Ctrl + Shift + B` | `⌘ + ⇧ + B` |
+| Toggle Usage & Cost Dashboard | `Ctrl + Shift + U` | `⌘ + ⇧ + U` |
+| Open Settings & Auth | `Ctrl + ,` | `⌘ + ,` |
+| Open File Link in External Editor | `Ctrl + Click` | `⌘ + Click` |
 
 ---
 
@@ -53,6 +86,9 @@ bun install
 
 # Run full desktop app in dev mode
 bun run tauri dev
+
+# Build native OS installer / bundle
+bun run tauri build
 
 # Run all checks & tests
 bun run typecheck

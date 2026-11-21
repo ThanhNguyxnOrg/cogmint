@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Columns2, Pin, Plus, Rows2, X } from 'lucide-react'
 import type { HarnessSpec } from '../../types/ipc'
 import type { PaneRuntimeState, SplitDirection } from '../../types/workspace'
@@ -11,6 +12,7 @@ interface PaneTabBarProps {
   onSelectTab: (paneId: string) => void
   onCloseTab: (paneId: string) => void
   onTogglePin: (paneId: string) => void
+  onReorderTab?: (fromIdx: number, toIdx: number) => void
   onLaunchTab: () => void
   onSplit: (dir: SplitDirection) => void
 }
@@ -23,9 +25,13 @@ export function PaneTabBar({
   onSelectTab,
   onCloseTab,
   onTogglePin,
+  onReorderTab,
   onLaunchTab,
   onSplit,
 }: PaneTabBarProps) {
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [overIdx, setOverIdx] = useState<number | null>(null)
+
   return (
     <div
       className={`flex h-8 shrink-0 items-center justify-between border-b px-1.5 ${
@@ -33,17 +39,46 @@ export function PaneTabBar({
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
-        {panes.map((pane) => {
+        {panes.map((pane, idx) => {
           const active = pane.id === activePaneId
           return (
             <div
               key={pane.id}
+              draggable={Boolean(onReorderTab)}
+              onDragStart={() => setDragIdx(idx)}
+              onDragOver={(e) => {
+                if (dragIdx === null) return
+                e.preventDefault()
+                setOverIdx(idx)
+              }}
+              onDragLeave={() => {
+                if (overIdx === idx) setOverIdx(null)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                if (dragIdx !== null && dragIdx !== idx) {
+                  onReorderTab?.(dragIdx, idx)
+                }
+                setDragIdx(null)
+                setOverIdx(null)
+              }}
+              onDragEnd={() => {
+                setDragIdx(null)
+                setOverIdx(null)
+              }}
               onClick={() => onSelectTab(pane.id)}
+              onAuxClick={(e) => {
+                // Middle-click closes unpinned tabs like a native IDE/browser
+                if (e.button === 1 && !pane.pinned) {
+                  e.preventDefault()
+                  onCloseTab(pane.id)
+                }
+              }}
               className={`group flex h-6 max-w-[180px] shrink-0 items-center gap-1.5 rounded px-2 text-[11px] transition-colors cursor-pointer ${
                 active
                   ? 'bg-sunken text-fg ring-1 ring-line-strong'
                   : 'text-fg-2 hover:bg-white/[0.04] hover:text-fg'
-              }`}
+              } ${overIdx === idx && dragIdx !== idx ? 'ring-1 ring-cobalt' : ''}`}
             >
               {pane.pinned && <Pin className="size-2.5 shrink-0 text-cobalt" />}
               <StatusDot status={pane.attentionState} size={6} />

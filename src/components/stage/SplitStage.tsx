@@ -31,6 +31,7 @@ function SplitTreeView({
   const focusPane = useWorkspaceStore((s) => s.focusPane)
   const closePane = useWorkspaceStore((s) => s.closePane)
   const togglePinPane = useWorkspaceStore((s) => s.togglePinPane)
+  const reorderTab = useWorkspaceStore((s) => s.reorderTab)
   const resizeSplit = useWorkspaceStore((s) => s.resizeSplit)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -100,6 +101,7 @@ function SplitTreeView({
           closePane(paneId)
         }}
         onTogglePin={(paneId) => togglePinPane(paneId)}
+        onReorderTab={(fromIdx, toIdx) => reorderTab(workspace.id, node.id, fromIdx, toIdx)}
         onLaunchTab={() => onLaunchAgent(workspace.id, undefined, node.id)}
         onSplit={(dir) => onLaunchAgent(workspace.id, dir, node.id)}
       />
