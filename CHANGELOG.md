@@ -26,3 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/ThanhNguyxnOrg/cogmint/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/ThanhNguyxnOrg/cogmint/releases/tag/v0.1.0
+
+## [0.1.1] - 2026-11-10
+
+### Bug Fixes and Performance
+
+- grant artifact-read permissions to shared publisher ([1c4864f](https://github.com/ThanhNguyxnOrg/cogmint/commit/1c4864fe24c79cd5bfc6458211340b4f065600d7))
+
