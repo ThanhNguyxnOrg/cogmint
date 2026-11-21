@@ -23,7 +23,38 @@ jobs:
       package_manager: bun
       package_manager_version: "1.4.4"
       cache: ""
-      install_command: bun install --frozen-lockfile || bun install
-      prepare_command: bun run postinstall
+      install_command: bun install --frozen-lockfile
       typecheck_command: bun run typecheck
       test_command: bun run test
+      build_command: bun run build
+
+  rust:
+    needs: verify
+    permissions:
+      contents: read
+    name: rust (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install Linux Tauri dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Create frontend dist for Tauri checks
+        shell: bash
+        run: mkdir -p dist
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
