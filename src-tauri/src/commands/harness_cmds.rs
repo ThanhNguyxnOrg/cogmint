@@ -27,9 +27,13 @@ pub fn delete_custom_harness(db: State<'_, Database>, id: String) -> AppResult<(
 }
 
 #[tauri::command]
-pub fn resolve_resume_session(harness_id: String, cwd: String) -> Option<String> {
+pub async fn resolve_resume_session(harness_id: String, cwd: String) -> Option<String> {
     let home = dirs::home_dir()?;
-    resolve_latest_session_id(&harness_id, &PathBuf::from(cwd), &home)
+    tauri::async_runtime::spawn_blocking(move || {
+        resolve_latest_session_id(&harness_id, &PathBuf::from(cwd), &home)
+    })
+    .await
+    .ok()?
 }
 
 #[tauri::command]
