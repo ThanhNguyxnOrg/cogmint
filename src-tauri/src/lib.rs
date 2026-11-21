@@ -1,5 +1,7 @@
+pub mod commands;
 pub mod db;
 pub mod error;
+pub mod pty;
 
 use tauri::Manager;
 
@@ -17,8 +19,17 @@ pub fn run() {
             let db_path = data_dir.join("cogmint.db");
             let database = db::Database::open(&db_path).expect("failed to initialize SQLite DB");
             app.manage(database);
+            app.manage(pty::PtyManager::new());
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            commands::pty_cmds::spawn_pane_pty,
+            commands::pty_cmds::write_pty,
+            commands::pty_cmds::resize_pty,
+            commands::pty_cmds::kill_pty,
+            commands::pty_cmds::detect_shells,
+            commands::pty_cmds::list_wsl_distros,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running COGMINT");
 }
