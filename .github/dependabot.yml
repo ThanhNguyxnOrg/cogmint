@@ -38,15 +38,18 @@ updates:
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: /
     schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: Asia/Ho_Chi_Minh
+      interval: monthly
     labels:
       - dependencies
       - github-actions
     commit-message:
       prefix: chore
       include: scope
+    groups:
+      github-actions:
+        patterns: ["*"]
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 1
