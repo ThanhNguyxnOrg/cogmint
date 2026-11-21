@@ -42,6 +42,8 @@ export interface HarnessSpec {
   accentColor: string
   isBuiltin: boolean
   enabled: boolean
+  installed: boolean
+  resolvedPath: string | null
 }
 
 export interface CustomHarnessRecord {

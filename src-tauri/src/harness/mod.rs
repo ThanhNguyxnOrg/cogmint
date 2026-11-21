@@ -1,8 +1,10 @@
 pub mod attention;
+pub mod detect;
 pub mod resume;
 
 use crate::db::{CustomHarnessRecord, Database};
 use crate::error::AppResult;
+use crate::harness::detect::detect_command_path;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -25,142 +27,48 @@ pub struct HarnessSpec {
     pub accent_color: String,
     pub is_builtin: bool,
     pub enabled: bool,
+    pub installed: bool,
+    pub resolved_path: Option<String>,
+}
+
+fn builtin_entry(
+    id: &str,
+    name: &str,
+    mono: &str,
+    command: &str,
+    default_args: Vec<String>,
+    resume_strategy: ResumeStrategy,
+    accent_color: &str,
+) -> HarnessSpec {
+    HarnessSpec {
+        id: id.into(),
+        name: name.into(),
+        mono: mono.into(),
+        command: command.into(),
+        default_args,
+        resume_strategy,
+        accent_color: accent_color.into(),
+        is_builtin: true,
+        enabled: true,
+        installed: false,
+        resolved_path: None,
+    }
 }
 
 pub fn builtin_harnesses() -> Vec<HarnessSpec> {
     vec![
-        HarnessSpec {
-            id: "claude".into(),
-            name: "Claude Code".into(),
-            mono: "CC".into(),
-            command: "claude".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::ExactFlag,
-            accent_color: "#D97757".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "codex".into(),
-            name: "Codex CLI".into(),
-            mono: "CX".into(),
-            command: "codex".into(),
-            default_args: vec!["-c".into(), "tui.animations=false".into()],
-            resume_strategy: ResumeStrategy::ExactFlag,
-            accent_color: "#10A37F".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "opencode".into(),
-            name: "OpenCode".into(),
-            mono: "OC".into(),
-            command: "opencode".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::ExactFlag,
-            accent_color: "#2F6FFF".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "gemini".into(),
-            name: "Gemini CLI".into(),
-            mono: "GM".into(),
-            command: "gemini".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::LatestFlag,
-            accent_color: "#4285F4".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "copilot".into(),
-            name: "Copilot CLI".into(),
-            mono: "CP".into(),
-            command: "copilot".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#6E7681".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "antigravity".into(),
-            name: "Antigravity".into(),
-            mono: "AG".into(),
-            command: "agy".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#05DCA3".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "amp".into(),
-            name: "Amp".into(),
-            mono: "AM".into(),
-            command: "amp".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#F97316".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "kimi".into(),
-            name: "Kimi Code".into(),
-            mono: "KM".into(),
-            command: "kimi".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#38BDF8".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "kiro".into(),
-            name: "Kiro CLI".into(),
-            mono: "KR".into(),
-            command: "kiro-cli".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#A855F7".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "grok".into(),
-            name: "Grok Build".into(),
-            mono: "GK".into(),
-            command: "grok".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#E2E8F0".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "vibe".into(),
-            name: "Mistral Vibe".into(),
-            mono: "MV".into(),
-            command: "vibe".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#FB923C".into(),
-            is_builtin: true,
-            enabled: true,
-        },
-        HarnessSpec {
-            id: "droid".into(),
-            name: "Droid".into(),
-            mono: "DR".into(),
-            command: "droid".into(),
-            default_args: vec![],
-            resume_strategy: ResumeStrategy::BareRelaunch,
-            accent_color: "#22D3EE".into(),
-            is_builtin: true,
-            enabled: true,
-        },
+        builtin_entry("claude", "Claude Code", "CC", "claude", vec![], ResumeStrategy::ExactFlag, "#D97757"),
+        builtin_entry("codex", "Codex CLI", "CX", "codex", vec!["-c".into(), "tui.animations=false".into()], ResumeStrategy::ExactFlag, "#10A37F"),
+        builtin_entry("opencode", "OpenCode", "OC", "opencode", vec![], ResumeStrategy::ExactFlag, "#2F6FFF"),
+        builtin_entry("gemini", "Gemini CLI", "GM", "gemini", vec![], ResumeStrategy::LatestFlag, "#4285F4"),
+        builtin_entry("copilot", "Copilot CLI", "CP", "copilot", vec![], ResumeStrategy::BareRelaunch, "#E2E8F0"),
+        builtin_entry("antigravity", "Antigravity", "AG", "agy", vec![], ResumeStrategy::BareRelaunch, "#05DCA3"),
+        builtin_entry("amp", "Amp", "AM", "amp", vec![], ResumeStrategy::BareRelaunch, "#F97316"),
+        builtin_entry("kimi", "Kimi Code", "KM", "kimi", vec![], ResumeStrategy::BareRelaunch, "#38BDF8"),
+        builtin_entry("kiro", "Kiro CLI", "KR", "kiro-cli", vec![], ResumeStrategy::BareRelaunch, "#A855F7"),
+        builtin_entry("grok", "Grok Build", "GK", "grok", vec![], ResumeStrategy::BareRelaunch, "#F8FAFC"),
+        builtin_entry("vibe", "Mistral Vibe", "MV", "vibe", vec![], ResumeStrategy::BareRelaunch, "#FB923C"),
+        builtin_entry("droid", "Droid", "DR", "droid", vec![], ResumeStrategy::BareRelaunch, "#22D3EE"),
     ]
 }
 
@@ -192,9 +100,22 @@ pub fn list_all_harnesses(db: &Database) -> AppResult<Vec<HarnessSpec>> {
                 accent_color: c.accent_color,
                 is_builtin: false,
                 enabled: c.enabled,
+                installed: false,
+                resolved_path: None,
             });
         }
     }
+
+    // Auto-detect which harnesses are actually installed on this machine
+    for spec in &mut specs {
+        let resolved = detect_command_path(&spec.command);
+        spec.installed = resolved.is_some();
+        spec.resolved_path = resolved;
+    }
+
+    // Sort installed harnesses first, preserving catalog order within each group
+    specs.sort_by_key(|s| !s.installed);
+
     Ok(specs)
 }
 

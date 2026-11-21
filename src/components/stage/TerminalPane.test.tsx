@@ -40,6 +40,8 @@ function PaneWrapper() {
         accentColor: '#D97757',
         isBuiltin: true,
         enabled: true,
+        installed: true,
+        resolvedPath: '/usr/local/bin/claude',
       }}
     />
   )

@@ -1,6 +1,7 @@
 import { useId, type ButtonHTMLAttributes } from 'react'
 import type { AttentionState, HarnessSpec } from '../../types/ipc'
 import { formatShortcut } from '../../lib/keybindings'
+import { HarnessLogo } from './HarnessLogo'
 
 export const STATUS_META: Record<AttentionState, { label: string; color: string }> = {
   working: { label: 'Working', color: '#2F6FFF' },
@@ -97,26 +98,24 @@ export function LogoMark({ size = 18 }: { size?: number }) {
 
 export function HarnessGlyph({
   harness,
-  size = 16,
+  size = 18,
 }: {
-  harness?: Pick<HarnessSpec, 'mono' | 'accentColor'>
+  harness?: Pick<HarnessSpec, 'id' | 'mono' | 'accentColor'>
   size?: number
 }) {
   const color = harness?.accentColor ?? '#64748B'
-  const mono = harness?.mono ?? 'SH'
+  const iconSize = Math.max(12, Math.round(size * 0.78))
   return (
     <span
-      className="inline-grid shrink-0 place-items-center rounded-[4px] font-mono font-semibold tracking-tighter"
+      className="inline-grid shrink-0 place-items-center rounded-[5px]"
       style={{
         width: size,
         height: size,
-        fontSize: Math.max(7.5, size * 0.42),
-        color,
-        background: `${color}1A`,
-        boxShadow: `inset 0 0 0 1px ${color}33`,
+        background: `${color}14`,
+        boxShadow: `inset 0 0 0 1px ${color}2E`,
       }}
     >
-      {mono}
+      <HarnessLogo id={harness?.id} accentColor={color} size={iconSize} />
     </span>
   )
 }

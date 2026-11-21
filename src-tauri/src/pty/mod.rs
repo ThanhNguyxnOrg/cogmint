@@ -333,7 +333,24 @@ fn resolve_spawn_command(req: &SpawnPtyRequest) -> AppResult<(String, Vec<String
 
     if let Some(prog) = &req.program {
         if !prog.trim().is_empty() {
-            return Ok((prog.clone(), req.args.clone()));
+            #[cfg(target_os = "windows")]
+            {
+                let resolved = crate::harness::detect::detect_command_path(prog)
+                    .unwrap_or_else(|| prog.clone());
+                let lower = resolved.to_ascii_lowercase();
+                if lower.ends_with(".cmd") || lower.ends_with(".bat") {
+                    let mut cmd_args = vec!["/C".to_string(), resolved];
+                    cmd_args.extend(req.args.iter().cloned());
+                    return Ok(("cmd.exe".to_string(), cmd_args));
+                }
+                return Ok((resolved, req.args.clone()));
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                let resolved = crate::harness::detect::detect_command_path(prog)
+                    .unwrap_or_else(|| prog.clone());
+                return Ok((resolved, req.args.clone()));
+            }
         }
     }
 
