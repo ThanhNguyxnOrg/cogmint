@@ -14,19 +14,9 @@ updates:
       prefix: chore
       include: scope
     groups:
-      nuxt-stack:
-        patterns:
-          - "nuxt"
-          - "@nuxt/*"
-      vue-flow:
-        patterns:
-          - "@vue-flow/*"
       xterm:
         patterns:
           - "@xterm/*"
-      claude-sdk:
-        patterns:
-          - "@anthropic-ai/*"
       dev-tooling:
         dependency-type: development
         patterns:
@@ -36,6 +26,20 @@ updates:
     ignore:
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: cargo
+    directory: "/src-tauri"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
 
   - package-ecosystem: github-actions
     directory: /

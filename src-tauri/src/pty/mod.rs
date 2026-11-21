@@ -196,7 +196,7 @@ impl PtyManager {
         let on_event = Arc::new(on_event);
         let harness_label = req.program.clone().unwrap_or_else(|| "shell".into());
         std::thread::Builder::new()
-            .name(format!("pty-reader-{}", &pane_id))
+            .name(format!("pty-reader-{}", pane_id))
             .spawn(move || {
                 let mut buf = [0u8; 4096];
                 let mut carry = Vec::new();
