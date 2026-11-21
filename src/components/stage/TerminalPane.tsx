@@ -182,6 +182,9 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
         lastCols = term.cols
         lastRows = term.rows
         void resizePty(pane.id, term.cols, term.rows)
+      } else {
+        // A revealed WebGL canvas needs a repaint even when fit() leaves the grid unchanged.
+        term.refresh(0, term.rows - 1)
       }
     }
 
