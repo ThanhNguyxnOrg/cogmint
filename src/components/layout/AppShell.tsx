@@ -302,6 +302,9 @@ export function AppShell({
     let resumeId: string | null = null
     if (opts.resumeLatest) {
       resumeId = await resolveResumeSession(opts.harness.id, ws.path)
+      if (opts.harness.id === 'codex' && resumeId === null) {
+        window.alert('No Codex session was found in this directory. Starting a new session.')
+      }
     }
 
     const paneId = `pane-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
