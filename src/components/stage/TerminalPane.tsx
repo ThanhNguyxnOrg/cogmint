@@ -7,6 +7,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import type { HarnessSpec } from '../../types/ipc'
 import type { PaneRuntimeState, WorkspaceRecord } from '../../types/workspace'
 import {
+  listHarnesses,
   notifyNative,
   openInEditor,
   resizePty,
@@ -91,6 +92,12 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
             spawnedRef.current = false
             const next = evt.data.exitCode === 0 || evt.data.exitCode === null ? 'done' : 'failed'
             updatePaneAttention(pane.id, next)
+            // If an interactive sign-in pane exited cleanly, refresh harness auth badges automatically
+            if (pane.skipDefaultArgs && (evt.data.exitCode === 0 || evt.data.exitCode === null)) {
+              void listHarnesses().then((updated) => {
+                if (updated.length > 0) useWorkspaceStore.getState().setHarnesses(updated)
+              })
+            }
           }
         },
       )
@@ -163,7 +170,26 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
       },
     })
 
-    fit.fit()
+    let lastCols = 0
+    let lastRows = 0
+    let rafId: number | null = null
+
+    const safeFitAndResize = () => {
+      // Skip hidden/collapsed tabs so we never send bogus 1x1 resize events to ConPTY/TUI
+      if (el.clientWidth < 16 || el.clientHeight < 16) return
+      fit.fit()
+      if (term.cols !== lastCols || term.rows !== lastRows) {
+        lastCols = term.cols
+        lastRows = term.rows
+        void resizePty(pane.id, term.cols, term.rows)
+      }
+    }
+
+    if (el.clientWidth >= 16 && el.clientHeight >= 16) {
+      fit.fit()
+      lastCols = term.cols
+      lastRows = term.rows
+    }
     termRef.current = term
 
     const onDataDisp = term.onData((data) => {
@@ -173,8 +199,11 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
     const ro =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(() => {
-            fit.fit()
-            void resizePty(pane.id, term.cols, term.rows)
+            if (rafId !== null) cancelAnimationFrame(rafId)
+            rafId = requestAnimationFrame(() => {
+              rafId = null
+              safeFitAndResize()
+            })
           })
         : null
     ro?.observe(el)
@@ -182,6 +211,7 @@ export function TerminalPane({ pane, workspace, harness }: TerminalPaneProps) {
     void spawnInMountedTerminal(startFreshRef.current)
 
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
       onDataDisp.dispose()
       ro?.disconnect()
       term.dispose()

@@ -138,24 +138,34 @@ export function AppShell({
     }
   }, [activeWorkspace])
 
-  // Persist layout & panes to SQLite journal whenever active workspace tree/panes change
+  // Debounced persist of layout & panes to SQLite journal so high-frequency agent output never hammers SQLite
   useEffect(() => {
     if (!activeWorkspaceId) return
-    const tree = treesByWorkspaceId[activeWorkspaceId] ?? null
-    const wsPanes = Object.values(panesById)
-      .filter((p) => p.workspaceId === activeWorkspaceId)
-      .map((p) => ({
-        id: p.id,
-        workspaceId: p.workspaceId,
-        harnessId: p.harnessId,
-        title: p.title,
-        pinned: p.pinned,
-        resumeSessionId: p.resumeSessionId,
-        lastSummary: p.lastSummary,
-        customArgs: p.customArgs,
-      }))
-    void saveWorkspaceLayout(activeWorkspaceId, tree ? JSON.stringify(tree) : null, wsPanes)
+    const timer = setTimeout(() => {
+      const tree = treesByWorkspaceId[activeWorkspaceId] ?? null
+      const wsPanes = Object.values(panesById)
+        .filter((p) => p.workspaceId === activeWorkspaceId)
+        .map((p) => ({
+          id: p.id,
+          workspaceId: p.workspaceId,
+          harnessId: p.harnessId,
+          title: p.title,
+          pinned: p.pinned,
+          resumeSessionId: p.resumeSessionId,
+          lastSummary: p.lastSummary,
+          customArgs: p.customArgs,
+        }))
+      void saveWorkspaceLayout(activeWorkspaceId, tree ? JSON.stringify(tree) : null, wsPanes)
+    }, 400)
+    return () => clearTimeout(timer)
   }, [activeWorkspaceId, panesById, treesByWorkspaceId])
+
+  // Refresh local usage data whenever the user opens the Usage & Cost dashboard
+  useEffect(() => {
+    if (view === 'usage') {
+      void reloadUsage()
+    }
+  }, [view, reloadUsage])
 
   // 3-OS global keyboard shortcuts (capture phase so xterm focus does not swallow app shortcuts)
   useEffect(() => {

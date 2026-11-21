@@ -1,9 +1,13 @@
+import { lazy, Suspense } from 'react'
 import { useWorkspaceStore } from './stores/useWorkspaceStore'
 import { AppShell } from './components/layout/AppShell'
 import { ChangesDrawer } from './components/git/ChangesDrawer'
 import { CreateWorktreeModal } from './components/git/CreateWorktreeModal'
-import { UsageDashboard } from './components/usage/UsageDashboard'
 import { SettingsModal } from './components/settings/SettingsModal'
+
+const UsageDashboard = lazy(() =>
+  import('./components/usage/UsageDashboard').then((m) => ({ default: m.UsageDashboard })),
+)
 
 export default function App() {
   const workspaces = useWorkspaceStore((s) => s.workspaces)
@@ -14,7 +18,15 @@ export default function App() {
     <AppShell
       rightDrawer={<ChangesDrawer workspace={activeWorkspace} />}
       usageView={({ summary, onReload, onBack }) => (
-        <UsageDashboard summary={summary} onReload={onReload} onBack={onBack} />
+        <Suspense
+          fallback={
+            <div className="flex flex-1 items-center justify-center bg-canvas text-[12px] text-fg-3">
+              Loading Usage & Cost Dashboard...
+            </div>
+          }
+        >
+          <UsageDashboard summary={summary} onReload={onReload} onBack={onBack} />
+        </Suspense>
       )}
       settingsModal={({ open, initialTab, initialHarnessId, onClose, onRunLoginCommand }) => (
         <SettingsModal
