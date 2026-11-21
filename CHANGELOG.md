@@ -33,3 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - grant artifact-read permissions to shared publisher ([1c4864f](https://github.com/ThanhNguyxnOrg/cogmint/commit/1c4864fe24c79cd5bfc6458211340b4f065600d7))
 
+## [0.2.0] - 2026-11-21
+
+Re-declared at 24a49b26f83a after prepared commit c41b61b72116 had required checks in state missing.
+
